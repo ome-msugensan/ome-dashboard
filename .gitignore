@@ -1,0 +1,6 @@
+# Raw survey exports contain personal data; only the anonymized data.js is committed.
+*.csv
+*.xlsx
+.DS_Store
+Thumbs.db
+.claude/
