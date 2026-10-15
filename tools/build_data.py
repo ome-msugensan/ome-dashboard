@@ -1,58 +1,92 @@
-# Build an anonymized data.js from the Google Forms CSV export.
+# Build an anonymized data.js from the CSS Google Sheet export (.xlsx or .csv).
 # Drops names, contact numbers, emails, consent text and staff names.
-import csv, json, re, sys, datetime, collections
+#
+#   python tools/build_data.py "Assets/CLIENT-SATISFACTION-SURVEY (Responses).xlsx" data.js
+#
+# The office -> sub-office/department hierarchy comes from tools/form_structure.json,
+# which mirrors the Google Form's sections (columns P..AD of the export, in order).
+import csv, json, re, sys, datetime, os, zipfile
+import xml.etree.ElementTree as ET
+
 src, out = sys.argv[1], sys.argv[2]
-rows = list(csv.reader(open(src, encoding='utf-8')))[1:]
+form = json.load(open(os.path.join(os.path.dirname(__file__), 'form_structure.json'), encoding='utf-8'))
 
-def norm_office(s):
-    s = re.sub(r'\s*\(.*\)\s*$', '', s.strip())
-    return s
 
-UNIT_COLS = range(15, 30)
-parent_of = collections.defaultdict(collections.Counter)
-col_units = collections.defaultdict(set)
-recs = []
+def read_xlsx(path):
+    ns = {'m': 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'}
+    z = zipfile.ZipFile(path)
+    shared = []
+    if 'xl/sharedStrings.xml' in z.namelist():
+        for si in ET.fromstring(z.read('xl/sharedStrings.xml')).findall('m:si', ns):
+            shared.append(''.join(t.text or '' for t in si.iter('{%s}t' % ns['m'])))
+    sheet = ET.fromstring(z.read('xl/worksheets/sheet1.xml'))
+    col_ix = lambda ref: sum((ord(c) - 64) * 26 ** i for i, c in enumerate(reversed(re.match(r'[A-Z]+', ref).group())))
+    rows = []
+    for r in sheet.iter('{%s}row' % ns['m']):
+        row = {}
+        for c in r.findall('m:c', ns):
+            v = c.find('m:v', ns)
+            t = c.get('t')
+            if t == 's': val = shared[int(v.text)]
+            elif t == 'inlineStr': val = ''.join(x.text or '' for x in c.iter('{%s}t' % ns['m']))
+            else:
+                val = v.text if v is not None else ''
+                if re.fullmatch(r'-?\d+\.0', val or ''): val = val[:-2]  # ratings are stored as 5.0
+            row[col_ix(c.get('r')) - 1] = val or ''
+        if row: rows.append([row.get(i, '') for i in range(max(row) + 1)])
+    return rows
+
+
+def parse_date(s):
+    s = s.strip()
+    if re.fullmatch(r'\d+(\.\d+)?', s):  # Excel serial date
+        return datetime.datetime(1899, 12, 30) + datetime.timedelta(days=float(s))
+    return datetime.datetime.strptime(s, '%m/%d/%Y %H:%M:%S')
+
+
+table = read_xlsx(src) if src.lower().endswith('.xlsx') else list(csv.reader(open(src, encoding='utf-8')))
+rows = [r + [''] * (42 - len(r)) for r in table[1:] if any(x.strip() for x in r)]
+
+struct = form['structure']
+by_label = {s['label']: s for s in struct}
+by_office = {s['office']: s for s in struct}
+UNIT_COLS = list(range(15, 30))  # columns P..AD = sub-office sections 1..15 of the form
+
+recs, routing = [], 0
 for x in rows:
-    ts = datetime.datetime.strptime(x[0].strip(), '%m/%d/%Y %H:%M:%S')
-    office = norm_office(x[1])
-    col = next((i for i in UNIT_COLS if x[i].strip()), None)
-    unit = x[col].strip() if col else ''
-    if unit: parent_of[col][office] += 1
-    for i in UNIT_COLS:
-        if x[i].strip(): col_units[i].add(x[i].strip())
-    sqd = ''.join(v.strip() if v.strip() in '12345' and v.strip() else '0' for v in x[30:41])
+    ts = parse_date(x[0])
+    label = x[1].strip()
+    s = by_label.get(label) or by_office.get(re.sub(r'\s*\(.*\)\s*$', '', label))
+    office = s['office'] if s else label
+    k = struct.index(s) if s else -1
+    unit = x[UNIT_COLS[k]].strip() if 0 <= k < len(UNIT_COLS) else ''
+    # Answers in another office's section come from the form's section routing, not the client's office.
+    extra = [x[c].strip() for i, c in enumerate(UNIT_COLS) if i != k and x[c].strip()]
+    if extra: routing += 1
+    sqd = ''.join(v.strip() if re.fullmatch(r'[1-5]', v.strip()) else '0' for v in x[30:41])
     c = x[41].strip()
-    if len(c) < 4 or c.lower().strip('. ') in {'none','n/a','na','wala','wala po','nothing','none so far','non','non so far','no comment','no comments','nonw'}:
+    if len(c) < 4 or c.lower().strip('. ') in {'none', 'n/a', 'na', 'wala', 'wala po', 'nothing', 'none so far', 'non', 'non so far', 'no comment', 'no comments', 'nonw'}:
         c = ''
     c = re.sub(r'\S+@\S+', '[email removed]', c)
     c = re.sub(r'(\+?63|0)9\d{9}', '[number removed]', c)
-    recs.append(dict(d=ts.strftime('%Y-%m-%d'), o=office, u=unit, g=x[6].strip(), t=x[7].strip(),
+    recs.append(dict(d=ts.strftime('%Y-%m-%d'), o=office, u=unit, x=1 if extra else 0, g=x[6].strip(), t=x[7].strip(),
                      c1=x[10].strip(), c2=x[11].strip(), c3=x[12].strip(), s=sqd, m=c))
 
-# Office -> units hierarchy (unit attached to its most common parent)
-hier = collections.defaultdict(set)
-for r in recs: hier[r['o']]
-# Column AD is the College of Medicine department section of the form; some
-# respondents from other offices were routed there by the form's branching.
-COL_PARENT = {29: 'College of Medicine'}
-for col, cnt in parent_of.items(): hier[COL_PARENT.get(col) or cnt.most_common(1)[0][0]] |= col_units[col]
-hier = {o: sorted(us) for o, us in sorted(hier.items())}
-
-dims = lambda vals: sorted(set(vals))
-lists = dict(offices=list(hier), genders=dims(r['g'] for r in recs), types=dims(r['t'] for r in recs),
-             cc1=["I know what a CC is and I saw this office's CC.",
-                  "I know what a CC is but I did NOT see this office's CC.",
-                  "I learned of the CC only when I saw this office's CC",
-                  "I do not know what a CC is and I did not see one in this office"],
-             cc2=["Easy to see", "Somewhat easy to see", "Difficult to see", "Not visible at all"],
-             cc3=["Helped very much", "Somewhat helped", "Did not help"])
+offices = [s['office'] for s in struct] + sorted({r['o'] for r in recs} - {s['office'] for s in struct})
 units = sorted({r['u'] for r in recs if r['u']})
+genders = sorted({r['g'] for r in recs})
+types = sorted({r['t'] for r in recs})
 idx = lambda L: {v: i for i, v in enumerate(L)}
-io, iu, ig, it = idx(lists['offices']), idx(units), idx(lists['genders']), idx(lists['types'])
-i1, i2, i3 = idx(lists['cc1']), idx(lists['cc2']), idx(lists['cc3'])
+io, iu, ig, it = idx(offices), idx(units), idx(genders), idx(types)
+i1, i2, i3 = idx(form['cc1']), idx(form['cc2']), idx(form['cc3'])
 packed = [[r['d'], io[r['o']], iu[r['u']] if r['u'] else -1, ig[r['g']], it[r['t']],
-           i1.get(r['c1'], -1), i2.get(r['c2'], -1), i3.get(r['c3'], -1), r['s'], r['m']] for r in recs]
+           i1.get(r['c1'], -1), i2.get(r['c2'], -1), i3.get(r['c3'], -1), r['s'], r['m'], r['x']] for r in recs]
+
 data = dict(source='CLIENT-SATISFACTION-SURVEY (Responses)', exported=datetime.date.today().isoformat(),
-            lists=lists, units=units, hierarchy=hier, rows=packed)
-open(out, 'w', encoding='utf-8').write('/* Anonymized CSS responses - generated by build_data.py */\nwindow.CSS_SEED = ' + json.dumps(data, ensure_ascii=False, separators=(',', ':')) + ';\n')
-print(len(packed), 'rows;', sum(1 for r in recs if r['m']), 'comments;', json.dumps(hier, indent=1))
+            form=form, lists=dict(offices=offices, genders=genders, types=types, cc1=form['cc1'], cc2=form['cc2'], cc3=form['cc3']),
+            units=units, rows=packed)
+open(out, 'w', encoding='utf-8').write('/* Anonymized CSS responses - generated by tools/build_data.py */\nwindow.CSS_SEED = ' + json.dumps(data, ensure_ascii=False, separators=(',', ':')) + ';\n')
+unknown = [r['u'] for r in recs if r['u'] and r['u'] not in by_office.get(r['o'], {'units': []})['units']]
+dates = sorted(r['d'] for r in recs)
+print(f"{len(packed)} rows {dates[0]}..{dates[-1]}; {sum(1 for r in recs if r['m'])} comments; "
+      f"{routing} with answers from another office's section; units not in form: {sorted(set(unknown))}; offices not in form: {offices[len(struct):]}")

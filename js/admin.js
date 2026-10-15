@@ -99,7 +99,7 @@
         <tr><td>Date range</td><td class="num">${dates[0] || '–'} to ${dates[dates.length - 1] || '–'}</td></tr>
       </tbody></table>
       <ul class="issue-list small" style="margin-top:10px">${warn(i.duplicates, 'duplicate submissions skipped (same timestamp, e-mail and office)') + warn(i.badDate, 'rows with an unreadable timestamp skipped') +
-        warn(i.missingRatings, 'responses with one or more unanswered ratings (counted as N/A)') + warn(i.outOfRange, 'responses with a rating outside 1–5 (counted as N/A)') +
+        warn(i.routed, 'responses with an extra sub-office answer from another section (form routing; ignored)') + warn(i.missingRatings, 'responses with one or more unanswered ratings (counted as N/A)') + warn(i.outOfRange, 'responses with a rating outside 1–5 (counted as N/A)') +
         (i.unknownOffice.length ? `<li><span class="pill warn">${i.unknownOffice.length}</span> office name(s) not in the current list: ${i.unknownOffice.map(esc).join('; ')}</li>` : '') || '<li><span class="pill good">OK</span> No issues found</li>'}</ul>
       <div class="btn-row" style="margin-top:10px"><button class="btn" id="confirmImport" ${res.rows.length ? '' : 'disabled'}>Replace dataset with these ${fmt.num(res.rows.length)} responses</button></div>`;
     box.querySelector('#confirmImport').onclick = () => {
@@ -116,19 +116,24 @@
     const periods = periodsOf(rows, pt);
     const offices = [...new Set(rows.map(r => r.office))].sort();
     const served = Store.clientsServed();
-    const hier = Store.hierarchy;
+
     const incomplete = rows.filter(r => r.sqd.some(v => !v)).length;
-    const mismatch = rows.filter(r => r.unit && hier[r.originalOffice || r.office] && !hier[r.originalOffice || r.office].includes(r.unit));
+    const routed = rows.filter(r => r.routed);
+    const noUnit = rows.filter(r => !r.unit && (Store.hierarchy[r.originalOffice || r.office] || []).length);
     const noCC = rows.filter(r => r.cc1 < 0).length;
 
     pane.innerHTML = `
       <div class="grid g3">
         <div class="card kpi"><div class="label">Total responses</div><div class="value">${fmt.num(rows.length)}</div><div class="foot">${periods.length} ${pt}s · ${offices.length} offices</div></div>
         <div class="card kpi"><div class="label">With N/A or blank ratings</div><div class="value">${fmt.num(incomplete)}</div><div class="foot">Excluded item by item from scores</div></div>
-        <div class="card kpi"><div class="label">Unit / office mismatches</div><div class="value">${fmt.num(mismatch.length)}</div><div class="foot">Department not under the chosen office</div></div>
+        <div class="card kpi"><div class="label">Form routing issues</div><div class="value">${fmt.num(routed.length)}</div><div class="foot">Also answered another office's section</div></div>
       </div>
-      ${mismatch.length ? `<div class="callout" style="margin-top:16px"><b>Check the form's section routing.</b> ${mismatch.length} responses name a unit that belongs to another office, for example
-        ${[...groupBy(mismatch, r => r.office + ' → ' + r.unit)].slice(0, 4).map(([k, v]) => `“${esc(k)}” (${v.length})`).join(', ')}.</div>` : ''}
+      ${routed.length ? `<div class="callout" style="margin-top:16px"><b>Check the Google Form's section routing.</b> ${routed.length} clients were shown a second office's sub-office question after answering their own
+        (most from ${[...groupBy(routed, r => r.originalOffice || r.office)].sort((a, b) => b[1].length - a[1].length).slice(0, 3).map(([k, v]) => `${esc(k)} (${v.length})`).join(', ')}).
+        In the Google Form, these sub-office options continue to the next section instead of jumping to <i>Service Quality</i>: every option under the Institute of Islamic, Arabic, and International Studies and under the OVC for Research, Extension, and Innovation;
+        Procurement Management Office, Accounting Office and Business Income Generating Office (OVC for Administration and Finance); and Civil Security Services (Office of the Chancellor).
+        These responses are still counted under the domain office the client chose; the extra answer is ignored.</div>` : ''}
+      ${noUnit.length ? `<p class="small muted">${noUnit.length} responses chose a domain office but no sub-office or department. They are reported as “office-level / not specified”.</p>` : ''}
       ${noCC ? `<p class="small muted">${noCC} responses have no CC1 answer.</p>` : ''}
       <div class="card" style="margin-top:16px"><h3>Responses by office and ${pt}</h3>
         <p class="small muted">Type the number of clients each office served in a period (from its logbook or transaction records) to compute the response rate. Leave blank if not tracked.</p>

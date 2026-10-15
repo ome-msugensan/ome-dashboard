@@ -1,4 +1,6 @@
 # Raw survey exports contain personal data; only the anonymized data.js is committed.
+# Original assets and exports stay local; web-ready copies live in img/.
+Assets/
 *.csv
 *.xlsx
 .DS_Store

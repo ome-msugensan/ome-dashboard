@@ -4,7 +4,7 @@
   const O = window.OME;
   const { Store, SQD, THEMES, summarize, band, groupBy, filterRows, periodsOf, periodKey, periodLabel, commentsWithThemes, fmt, esc } = O;
 
-  const C = { maroon: '#7a1d2c', gold: '#c8992b', grey: '#9aa3ad', good: '#1f7a4d', bad: '#b3261e', light: '#e9d3d7' };
+  const C = { brand: '#720455', gold: '#ffab00', grey: '#a8a2ad', good: '#1f7a4d', bad: '#b3261e', light: '#ecd3e4' };
   const charts = [];
   function chart(canvas, cfg) {
     if (!window.Chart) { canvas.parentElement.innerHTML = '<p class="muted small">Charts need an internet connection (Chart.js loads from a CDN).</p>'; return; }
@@ -15,24 +15,26 @@
   O.clearCharts = () => { while (charts.length) charts.pop().destroy(); };
 
   // Shared filter state across Dashboard / Quality views.
-  const filters = { period: '', office: '', type: '' };
+  const filters = { period: '', office: '', unit: '', type: '' };
 
   function filterBar(rows, onChange, extra) {
     const pt = Store.settings.periodType;
     const periods = periodsOf(rows, pt);
-    const offices = [...new Set(rows.map(r => r.office))].sort();
+    const present = new Set(rows.map(r => r.office));
+    const offices = Store.structure.map(s => s.office).filter(o => present.has(o)).concat([...present].filter(o => !Store.hierarchy[o]).sort());
     const types = [...new Set(rows.map(r => r.type))].sort();
     const wrap = document.createElement('div');
     wrap.className = 'card filters no-print';
     wrap.innerHTML = `
       <label>Reporting period<select data-f="period"><option value="">All periods</option>${periods.map(p => `<option value="${p}">${periodLabel(p)}</option>`).join('')}</select></label>
-      <label>Office<select data-f="office"><option value="">All offices</option>${offices.map(o => `<option>${esc(o)}</option>`).join('')}</select></label>
+      <label>Domain office<select data-f="office"><option value="">All domain offices</option>${offices.map(o => `<option>${esc(o)}</option>`).join('')}</select></label>
+      ${filters.office && (Store.hierarchy[filters.office] || []).length ? `<label>${Store.unitKind(filters.office) === 'department' ? 'Department' : 'Office'}<select data-f="unit"><option value="">All</option>${Store.hierarchy[filters.office].map(u => `<option>${esc(u)}</option>`).join('')}</select></label>` : ''}
       <label>Client type<select data-f="type"><option value="">All client types</option>${types.map(o => `<option>${esc(o)}</option>`).join('')}</select></label>
       <span class="muted small" style="margin-left:auto">${extra || ''}</span>`;
     wrap.querySelectorAll('select').forEach(s => {
       s.value = filters[s.dataset.f] || '';
       if (s.value !== filters[s.dataset.f]) filters[s.dataset.f] = '';
-      s.addEventListener('change', () => { filters[s.dataset.f] = s.value; onChange(); });
+      s.addEventListener('change', () => { filters[s.dataset.f] = s.value; if (s.dataset.f === 'office') filters.unit = ''; onChange(); });
     });
     return wrap;
   }
@@ -86,7 +88,7 @@
         <div class="card"><h3>Overall satisfaction trend</h3><p class="small muted">CSS score (bars: number of responses) by ${Store.settings.periodType}.</p><div class="chart-box"><canvas id="cTrend"></canvas></div></div>
         <div class="card"><h3>Ratings by service dimension</h3><p class="small muted">Share of Agree / Strongly Agree for each statement.</p><div class="chart-box"><canvas id="cDims"></canvas></div></div>
       </div>
-      <div class="card"><div class="section-head"><div><h3>Satisfaction by office or service unit</h3><p class="small muted">Click an office to see its units. Offices with fewer than ${Store.settings.minResponses} responses are shown in grey.</p></div></div>
+      <div class="card"><div class="section-head"><div><h3>Satisfaction by office or service unit</h3><p class="small muted">Click a domain office to see its offices or departments. Offices with fewer than ${Store.settings.minResponses} responses are shown in grey.</p></div></div>
         <div class="table-wrap"><table id="officeTable"><thead><tr><th>Office</th><th class="num">Responses</th><th class="num">Avg (1–5)</th><th style="width:22%">CSS score</th><th class="num">%</th><th>Rating</th></tr></thead><tbody></tbody></table></div>
       </div>
       <div class="card"><div class="section-head"><div><h3>Comparison across reporting periods</h3><p class="small muted">Each dimension's CSS score per period.</p></div></div><div class="table-wrap" id="periodCompare"></div></div>`);
@@ -98,7 +100,7 @@
       data: {
         labels: trend.map(t => periodLabel(t[0])),
         datasets: [
-          { type: 'line', label: 'CSS score (%)', data: trend.map(t => +summarize(t[1]).css.toFixed(1)), borderColor: C.maroon, backgroundColor: C.maroon, yAxisID: 'y', tension: .25, pointRadius: 4 },
+          { type: 'line', label: 'CSS score (%)', data: trend.map(t => { const v = summarize(t[1]).css; return v == null ? null : +v.toFixed(1); }), borderColor: C.brand, backgroundColor: C.brand, yAxisID: 'y', tension: .25, pointRadius: 4 },
           { type: 'bar', label: 'Responses', data: trend.map(t => t[1].length), backgroundColor: C.light, yAxisID: 'y1' }
         ]
       },
@@ -110,7 +112,7 @@
     // Dimensions
     chart(body.querySelector('#cDims'), {
       type: 'bar',
-      data: { labels: SQD.map(q => q.code + ' ' + q.short), datasets: [{ label: '% satisfied', data: s.items.map(i => i.pct == null ? null : +i.pct.toFixed(1)), backgroundColor: s.items.map(i => i.pct >= Store.settings.target ? C.maroon : C.gold), borderRadius: 4 }] },
+      data: { labels: SQD.map(q => q.code + ' ' + q.short), datasets: [{ label: '% satisfied', data: s.items.map(i => i.pct == null ? null : +i.pct.toFixed(1)), backgroundColor: s.items.map(i => i.pct >= Store.settings.target ? C.brand : C.gold), borderRadius: 4 }] },
       options: { indexAxis: 'y', maintainAspectRatio: false, scales: { x: { min: 0, max: 100 } }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${c.raw}% satisfied · avg ${fmt.score(s.items[c.dataIndex].mean)}` } } } }
     });
 
@@ -119,10 +121,12 @@
     const row = (name, st, indent, low) => {
       const bd = band(st.css);
       return `<tr style="${low ? 'color:#9aa3ad' : ''}"><td style="padding-left:${10 + indent * 22}px">${name}</td><td class="num">${fmt.num(st.n)}</td><td class="num">${fmt.score(st.mean)}</td>
-        <td><div class="bar"><span style="width:${st.css || 0}%;background:${low ? C.grey : st.css >= Store.settings.target ? C.maroon : C.gold}"></span></div></td>
+        <td><div class="bar"><span style="width:${st.css || 0}%;background:${low ? C.grey : st.css >= Store.settings.target ? C.brand : C.gold}"></span></div></td>
         <td class="num">${fmt.pct(st.css)}</td><td><span class="pill ${low ? 'neutral' : bd.cls}">${bd.label}</span></td></tr>`;
     };
-    tb.innerHTML = officeStats.map((st, i) => row(`<a href="#" data-i="${i}">${esc(st.o)}</a>`, st, 0, st.n < Store.settings.minResponses)).join('');
+    tb.innerHTML = officeStats.map((st, i) => row(`<a href="#" data-i="${i}">${esc(st.o)}</a>`, st, 0, st.n < Store.settings.minResponses)).join('') +
+      (filters.office ? '' : Store.structure.filter(s => !officeStats.some(o => o.o === s.office)).map(s =>
+        `<tr style="color:#9aa3ad"><td>${esc(s.office)}</td><td class="num">0</td><td class="num">–</td><td></td><td class="num">–</td><td><span class="pill neutral">No responses yet</span></td></tr>`).join(''));
     tb.addEventListener('click', e => {
       const a = e.target.closest('a[data-i]'); if (!a) return;
       e.preventDefault();
@@ -132,9 +136,12 @@
         return;
       }
       const st = officeStats[+a.dataset.i];
-      const units = [...groupBy(rows.filter(r => r.office === st.o), r => r.unit || '(Office-level / not specified)')].map(([u, rs]) => ({ u, n: rs.length, ...summarize(rs) })).sort((a, b) => b.n - a.n);
+      const byUnit = groupBy(rows.filter(r => r.office === st.o), r => r.unit || '(Office-level / not specified)');
+      const order = (Store.hierarchy[st.o] || []).concat([...byUnit.keys()].filter(u => !(Store.hierarchy[st.o] || []).includes(u)));
       const tmp = document.createElement('tbody');
-      tmp.innerHTML = units.map(u => row(esc(u.u), u, 1, u.n < Store.settings.minResponses)).join('');
+      tmp.innerHTML = order.map(u => byUnit.has(u)
+        ? row(esc(u), { n: byUnit.get(u).length, ...summarize(byUnit.get(u)) }, 1, byUnit.get(u).length < Store.settings.minResponses)
+        : `<tr style="color:#9aa3ad"><td style="padding-left:32px">${esc(u)}</td><td class="num">0</td><td class="num">–</td><td></td><td class="num">–</td><td><span class="pill neutral">No responses yet</span></td></tr>`).join('');
       [...tmp.children].reverse().forEach(r => { r.classList.add('sub'); tr.after(r); });
     });
 
@@ -183,7 +190,7 @@
       .map(([o, rs]) => ({ o, n: rs.length, ...summarize(rs) })).filter(o => o.n >= st.minResponses).sort((a, b) => b.css - a.css);
     const unitWord = filters.office ? 'units' : 'offices';
 
-    const li = (name, pct, n) => `<li><span>${name}${n != null ? ` <span class="muted small">(${n})</span>` : ''}</span><div class="bar"><span style="width:${pct}%;background:${pct >= st.target ? C.maroon : C.gold}"></span></div><b class="num" style="text-align:right">${fmt.pct(pct)}</b></li>`;
+    const li = (name, pct, n) => `<li><span>${name}${n != null ? ` <span class="muted small">(${n})</span>` : ''}</span><div class="bar"><span style="width:${pct}%;background:${pct >= st.target ? C.brand : C.gold}"></span></div><b class="num" style="text-align:right">${fmt.pct(pct)}</b></li>`;
     const low = offices.filter(o => o.css < st.target).sort((a, b) => a.css - b.css);
     const lowDims = sortedDims.filter(d => d.pct < st.target).reverse();
 
@@ -221,7 +228,7 @@
     const cc1 = ccCount('cc1', Store.lists.cc1);
     chart(body.querySelector('#cCC'), {
       type: 'bar',
-      data: { labels: ['Knows CC, saw it', 'Knows CC, did not see it', 'Learned of CC here', 'Does not know CC'], datasets: [{ data: cc1, backgroundColor: [C.maroon, C.gold, '#b8707c', C.grey], borderRadius: 4 }] },
+      data: { labels: ['Knows CC, saw it', 'Knows CC, did not see it', 'Learned of CC here', 'Does not know CC'], datasets: [{ data: cc1, backgroundColor: [C.brand, C.gold, '#b46a9c', C.grey], borderRadius: 4 }] },
       options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${c.raw} (${(c.raw / rows.length * 100).toFixed(1)}%)` } } } }
     });
 

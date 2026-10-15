@@ -6,13 +6,14 @@
   <title>OME Client Satisfaction</title>
   <meta name="description" content="Client Satisfaction Survey and results dashboard of the Office of Monitoring and Evaluation, MSU – General Santos (prototype).">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="img/favicon.png">
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
   <div class="topbar"><div class="topbar-inner">
-    <div class="seal" aria-hidden="true">OME</div>
-    <div><div class="brand-title">Office of Monitoring and Evaluation</div><div class="brand-sub">Mindanao State University – General Santos · Client Satisfaction</div></div>
+    <a href="#/dashboard"><img class="logo" src="img/ome-logo.png" alt="OME – Office of Monitoring and Evaluation"></a>
+    <div class="brand-text"><div class="brand-title">Office of Monitoring and Evaluation</div><div class="brand-sub">Mindanao State University – General Santos · Client Satisfaction Survey</div></div>
     <span class="proto-badge" title="Data is stored only in this browser">Prototype · local only</span>
   </div></div>
   <nav class="tabs" aria-label="Main"><div class="inner">
@@ -22,8 +23,16 @@
     <a href="#/reports" data-route="reports">Reports</a>
     <a href="#/admin" data-route="admin">Admin</a>
   </div></nav>
+  <div class="pattern-strip" aria-hidden="true"></div>
   <main id="view"></main>
-  <footer class="site">Prototype for presentation. Responses and settings are stored only in this browser. Survey data: anonymized export of the CSS Google Form.</footer>
+  <footer class="site">
+    <div class="pattern-strip" aria-hidden="true"></div>
+    <div class="inner">
+      <div><b>Office of Monitoring and Evaluation</b><br>Office of the Vice Chancellor for Planning and Development · MSU – General Santos<br>
+        <span style="opacity:.75">Prototype for presentation. Responses and settings are stored only in this browser.</span></div>
+      <img class="fe" src="img/fostering-excellence-white.png" alt="Fostering Excellence">
+    </div>
+  </footer>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <script src="data.js"></script>

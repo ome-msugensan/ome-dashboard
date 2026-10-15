@@ -49,7 +49,7 @@
   }
 
   function header(title, sub) {
-    return `<header><div class="uni">MINDANAO STATE UNIVERSITY – GENERAL SANTOS</div><div class="small">Office of Monitoring and Evaluation</div>
+    return `<header><div class="logos"><img src="img/ome-logo.png" alt="OME"></div><div class="uni">MINDANAO STATE UNIVERSITY – GENERAL SANTOS</div><div class="small">Office of Monitoring and Evaluation</div>
       <h2>${title}</h2><div class="small muted">${sub}</div></header>`;
   }
 
@@ -113,8 +113,8 @@
       <p class="small muted">CSS % is the share of Agree and Strongly Agree ratings among the responses that rated the item. N/A is excluded.</p>
       ${sqdTable(s)}
 
-      <h3>V. Results by ${officeLevel ? 'unit / department' : 'office'}</h3>
-      <table><thead><tr><th>${officeLevel ? 'Unit' : 'Office'}</th><th class="num">Responses</th><th class="num">Mean</th><th class="num">CSS %</th><th>Rating</th></tr></thead><tbody>
+      <h3>V. Results by ${officeLevel ? (Store.unitKind(sel.office) === 'department' ? 'department' : 'office') : 'domain office'}</h3>
+      <table><thead><tr><th>${officeLevel ? (Store.unitKind(sel.office) === 'department' ? 'Department' : 'Office') : 'Domain office'}</th><th class="num">Responses</th><th class="num">Mean</th><th class="num">CSS %</th><th>Rating</th></tr></thead><tbody>
       ${bdRows.map(r => `<tr><td>${esc(r.k)}</td><td class="num">${r.n}</td><td class="num">${fmt.score(r.mean)}</td><td class="num">${fmt.pct(r.css)}</td><td>${band(r.css).label}</td></tr>`).join('')}</tbody></table>
 
       <h3>VI. Client comments</h3>

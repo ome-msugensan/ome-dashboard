@@ -44,6 +44,11 @@
 
   const KEY = 'ome-css-proto-v1';
   const seed = window.CSS_SEED;
+  const form = seed.form;
+  // Domain office -> its sub-offices or departments, in the order of the Google Form.
+  const hierarchy = {};
+  form.structure.forEach(s => { hierarchy[s.office] = s.units; });
+  const UNIT_COLS = 15; // export columns P..AD hold the sub-office answer of form sections 1..15
 
   function load() {
     try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; }
@@ -58,12 +63,13 @@
     return seed.rows.map((r, i) => ({
       id: 's' + i, date: r[0], office: L.offices[r[1]], unit: r[2] >= 0 ? U[r[2]] : '',
       gender: L.genders[r[3]], type: L.types[r[4]].trim(),
-      cc1: r[5], cc2: r[6], cc3: r[7], sqd: r[8].split('').map(Number), comment: r[9], source: 'sheet'
+      cc1: r[5], cc2: r[6], cc3: r[7], sqd: r[8].split('').map(Number), comment: r[9], routed: !!r[10], source: 'sheet'
     }));
   }
 
   const Store = {
-    SQD, THEMES, lists: seed.lists, hierarchy: seed.hierarchy,
+    SQD, THEMES, form, lists: seed.lists, hierarchy, structure: form.structure,
+    unitKind(office) { const s = form.structure.find(x => x.office === office); return s && s.unitKind; },
     get settings() { return Object.assign({}, DEFAULT_SETTINGS, state.settings || {}); },
     saveSettings(s) { state.settings = s; save(); },
     resetSettings() { delete state.settings; save(); },
@@ -188,21 +194,26 @@
     const table = parseCSV(text);
     const header = table[0] || [];
     const body = table.slice(1);
-    const issues = { badDate: 0, missingRatings: 0, outOfRange: 0, duplicates: 0, unknownOffice: [], wrongColumns: header.length < 42 };
+    const issues = { badDate: 0, missingRatings: 0, outOfRange: 0, duplicates: 0, routed: 0, unknownOffice: [], wrongColumns: header.length < 42 };
     if (issues.wrongColumns) return { rows: [], issues, total: body.length, header };
     const seen = new Set(), out = [];
-    const known = new Set(seed.lists.offices);
+    const struct = form.structure;
     body.forEach((x, idx) => {
       const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec((x[0] || '').trim());
       if (!m) { issues.badDate++; return; }
       const date = `${m[3]}-${m[1].padStart(2, '0')}-${m[2].padStart(2, '0')}`;
-      const office = (x[1] || '').trim().replace(/\s*\(.*\)\s*$/, '');
-      if (!known.has(office) && !issues.unknownOffice.includes(office)) issues.unknownOffice.push(office);
+      const label = (x[1] || '').trim();
+      const k = struct.findIndex(s => s.label === label || s.office === label.replace(/\s*\(.*\)\s*$/, ''));
+      const office = k >= 0 ? struct[k].office : label;
+      if (k < 0 && !issues.unknownOffice.includes(office)) issues.unknownOffice.push(office);
       const dupKey = [(x[0] || '').trim(), (x[9] || '').trim().toLowerCase(), office].join('|');
       if (seen.has(dupKey)) { issues.duplicates++; return; }
       seen.add(dupKey);
-      let unit = '';
-      for (let i = 15; i < 30; i++) if ((x[i] || '').trim()) { unit = x[i].trim(); break; }
+      // The unit is the answer in this office's own section; answers in other sections come from form routing.
+      const unit = k >= 0 && k < UNIT_COLS ? (x[15 + k] || '').trim() : '';
+      let routed = false;
+      for (let i = 0; i < UNIT_COLS; i++) if (i !== k && (x[15 + i] || '').trim()) routed = true;
+      if (routed) issues.routed++;
       const raw = x.slice(30, 41).map(v => (v || '').trim());
       if (raw.some(v => v && !/^[1-5]$/.test(v))) issues.outOfRange++;
       if (raw.some(v => !v)) issues.missingRatings++;
@@ -213,7 +224,7 @@
       out.push({
         id: 'i' + idx, date, office, unit, gender: (x[6] || '').trim(), type: (x[7] || '').trim(),
         cc1: ix(seed.lists.cc1, x[10]), cc2: ix(seed.lists.cc2, x[11]), cc3: ix(seed.lists.cc3, x[12]),
-        sqd: raw.map(v => /^[1-5]$/.test(v) ? +v : 0), comment, source: 'import'
+        sqd: raw.map(v => /^[1-5]$/.test(v) ? +v : 0), comment, routed, source: 'import'
       });
     });
     return { rows: out, issues, total: body.length, header };
