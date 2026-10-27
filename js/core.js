@@ -29,14 +29,14 @@
 
   const DEFAULT_SETTINGS = {
     periodType: 'month',      // month | quarter | year
-    target: 80,               // % satisfied target used to flag "needs improvement"
+    target: 80,               // CSS score (%) target used to flag "needs improvement"; 80% = weighted mean 4.00
     minResponses: 10,         // minimum responses before an office is ranked
-    bands: [                  // CSS score rating scale (lower bound, label)
-      { min: 90, label: 'Outstanding' },
-      { min: 80, label: 'Very Satisfactory' },
-      { min: 70, label: 'Satisfactory' },
-      { min: 60, label: 'Fair' },
-      { min: 0, label: 'Poor' }
+    bands: [                  // rating scale: lower bound of the weighted mean (1-5), label
+      { min: 4.21, label: 'Outstanding' },
+      { min: 3.41, label: 'Very Satisfactory' },
+      { min: 2.61, label: 'Satisfactory' },
+      { min: 1.81, label: 'Fair' },
+      { min: 1, label: 'Poor' }
     ],
     aliases: {}               // office name -> reporting name
   };
@@ -111,31 +111,41 @@
     return key;
   }
 
-  /* ---------- Metrics ---------- */
+  /* ---------- Metrics ----------
+   * Weighted mean = Σ(f × r) / N: each rating r (1-5) times how many clients gave it (f),
+   * divided by the number of ratings N (N/A excluded). CSS score (%) = weighted mean ÷ 5 × 100.
+   * The overall score uses SQD1-SQD10; SQD0 ("I am satisfied…") is reported on its own. */
+  const SCORED = SQD.map((q, i) => i).filter(i => i > 0);
+
   function summarize(rows) {
-    const items = SQD.map(() => ({ counts: [0, 0, 0, 0, 0, 0], n: 0, sum: 0, sat: 0 })); // counts[0] = N/A
-    let allN = 0, allSum = 0, allSat = 0, satClients = 0, satBase = 0;
+    const items = SQD.map(() => ({ counts: [0, 0, 0, 0, 0, 0], n: 0, sum: 0 })); // counts[0] = N/A
+    let allN = 0, allSum = 0, satClients = 0, satBase = 0;
     for (const r of rows) {
       r.sqd.forEach((v, i) => {
         const it = items[i];
         it.counts[v]++;
-        if (v > 0) { it.n++; it.sum += v; if (v >= 4) it.sat++; allN++; allSum += v; if (v >= 4) allSat++; }
+        if (v > 0) { it.n++; it.sum += v; if (SCORED.includes(i)) { allN++; allSum += v; } }
       });
       if (r.sqd[0] > 0) { satBase++; if (r.sqd[0] >= 4) satClients++; }
     }
-    items.forEach(it => { it.mean = it.n ? it.sum / it.n : null; it.pct = it.n ? it.sat / it.n * 100 : null; });
+    items.forEach(it => { it.mean = it.n ? it.sum / it.n : null; it.pct = it.n ? it.mean / 5 * 100 : null; });
+    const mean = allN ? allSum / allN : null;
     return {
       n: rows.length, items,
-      mean: allN ? allSum / allN : null,          // average rating, 1-5
-      css: allN ? allSat / allN * 100 : null,      // % of all ratings that are Agree / Strongly Agree
+      mean,                                        // overall weighted mean of SQD1-SQD10, 1-5
+      css: mean == null ? null : mean / 5 * 100,   // CSS score: weighted mean as a percentage
       satisfiedPct: satBase ? satClients / satBase * 100 : null // % of clients who agreed with SQD0
     };
   }
 
+  // Rating label for a CSS score. Bands hold weighted-mean lower bounds (1-5), compared at the
+  // two decimals reports show; bands saved before the switch held % bounds and still work.
   function band(pct) {
     if (pct == null) return { label: 'No data', cls: 'neutral' };
     const s = Store.settings;
-    const b = s.bands.find(b => pct >= b.min) || s.bands[s.bands.length - 1];
+    const onMean = s.bands.every(b => b.min <= 5);
+    const value = onMean ? Math.round(pct / 20 * 100) / 100 : pct;
+    const b = s.bands.find(b => value >= b.min) || s.bands[s.bands.length - 1];
     const cls = pct >= s.target ? 'good' : pct >= s.target - 10 ? 'warn' : 'bad';
     return { label: b.label, cls };
   }

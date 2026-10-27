@@ -65,12 +65,12 @@
   }
 
   function sqdTable(s) {
-    const head = ['Statement', 'SA (5)', 'A (4)', 'N (3)', 'D (2)', 'SD (1)', 'N/A', 'Responses', 'Mean', 'CSS %'];
+    const head = ['Statement', 'SA (5)', 'A (4)', 'N (3)', 'D (2)', 'SD (1)', 'N/A', 'Responses', 'Weighted mean', 'Score %'];
     const body = SQD.map((q, i) => { const it = s.items[i]; return [`${q.code} – ${q.en}`, it.counts[5], it.counts[4], it.counts[3], it.counts[2], it.counts[1], it.counts[0], it.n, fmt.score(it.mean), fmt.pct(it.pct)]; });
-    lastTable = [head].concat(body).concat([['Overall', '', '', '', '', '', '', '', fmt.score(s.mean), fmt.pct(s.css)]]);
+    lastTable = [head].concat(body).concat([['Overall (SQD1–SQD10)', '', '', '', '', '', '', '', fmt.score(s.mean), fmt.pct(s.css)]]);
     return `<div class="table-wrap"><table><thead><tr>${head.map((h, i) => `<th class="${i ? 'num' : ''}">${h}</th>`).join('')}</tr></thead><tbody>
       ${body.map(r => `<tr>${r.map((v, i) => `<td class="${i ? 'num' : ''}">${i ? v : esc(v)}</td>`).join('')}</tr>`).join('')}
-      <tr class="total"><td>Overall</td><td colspan="7"></td><td class="num">${fmt.score(s.mean)}</td><td class="num">${fmt.pct(s.css)}</td></tr></tbody></table></div>`;
+      <tr class="total"><td>Overall (SQD1–SQD10)</td><td colspan="7"></td><td class="num">${fmt.score(s.mean)}</td><td class="num">${fmt.pct(s.css)}</td></tr></tbody></table></div>`;
   }
 
   function countTable(title, values) {
@@ -110,7 +110,7 @@
       ${header(title, `${esc(scope)} · ${sel.period ? periodLabel(sel.period) : `${dates[0]} to ${dates[dates.length - 1]}`}`)}
       <h3>I. Summary</h3>
       <p>A total of <b>${fmt.num(s.n)}</b> clients answered the survey${sel.period ? ` in ${periodLabel(sel.period)}` : ''}. The overall CSS score is <b>${fmt.pct(s.css)}</b>
-        (average rating ${fmt.score(s.mean)} out of 5), rated <b>${b.label}</b>. ${fmt.pct(s.satisfiedPct)} of clients said they were satisfied with the service they availed (SQD0).</p>
+        (weighted mean ${fmt.score(s.mean)} out of 5), rated <b>${b.label}</b>. ${fmt.pct(s.satisfiedPct)} of clients said they were satisfied with the service they availed (SQD0).</p>
       <p>Strongest dimension: <b>${esc(sorted[0].q.short)}</b> (${fmt.pct(sorted[0].pct)}). Weakest dimension: <b>${esc(sorted[sorted.length - 1].q.short)}</b> (${fmt.pct(sorted[sorted.length - 1].pct)}).</p>
 
       <h3>II. Respondent profile</h3>
@@ -121,11 +121,12 @@
       <div class="grid g2 keep" style="margin-top:10px">${countTable('CC2 – Visibility', ccList('cc2', Store.lists.cc2))}${countTable('CC3 – Helpfulness', ccList('cc3', Store.lists.cc3))}</div>
 
       <h3>IV. Service quality dimensions</h3>
-      <p class="small muted">CSS % is the share of Agree and Strongly Agree ratings among the responses that rated the item. N/A is excluded.</p>
+      <p class="small muted">Weighted mean = Σ(f × r) ÷ N, where f is the number of clients who gave rating r (1–5) and N is the number of ratings; N/A is excluded. Score % = weighted mean ÷ 5 × 100.
+        The overall score uses SQD1–SQD10; SQD0 (overall satisfaction) is reported separately. Rating scale: ${Store.settings.bands.every(b => b.min <= 5) ? Store.settings.bands.map((b, i, a) => `${b.min.toFixed(2)}–${i ? (a[i - 1].min - 0.01).toFixed(2) : '5.00'} ${b.label}`).join('; ') : Store.settings.bands.map(b => `≥ ${b.min}% ${b.label}`).join('; ')}.</p>
       ${sqdTable(s)}
 
       <h3>V. Results by ${officeLevel ? (Store.unitKind(sel.office) === 'department' ? 'department' : 'office') : 'domain office'}</h3>
-      <table><thead><tr><th>${officeLevel ? (Store.unitKind(sel.office) === 'department' ? 'Department' : 'Office') : 'Domain office'}</th><th class="num">Responses</th><th class="num">Mean</th><th class="num">CSS %</th><th>Rating</th></tr></thead><tbody>
+      <table><thead><tr><th>${officeLevel ? (Store.unitKind(sel.office) === 'department' ? 'Department' : 'Office') : 'Domain office'}</th><th class="num">Responses</th><th class="num">Weighted mean</th><th class="num">Score %</th><th>Rating</th></tr></thead><tbody>
       ${bdRows.map(r => `<tr><td>${esc(r.k)}</td><td class="num">${r.n}</td><td class="num">${fmt.score(r.mean)}</td><td class="num">${fmt.pct(r.css)}</td><td>${band(r.css).label}</td></tr>`).join('')}</tbody></table>
 
       <h3>VI. Client comments</h3>

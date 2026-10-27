@@ -74,11 +74,11 @@
     const officeStats = [...groupBy(rows, r => r.office)].map(([o, rs]) => ({ o, n: rs.length, ...summarize(rs) })).sort((a, b) => b.css - a.css);
 
     body.insertAdjacentHTML('beforeend', `<div class="grid kpis">
-      ${kpi('Overall satisfaction rating', `${fmt.pct(s.css)}`, `<span class="pill ${b.cls}">${b.label}</span> &nbsp;avg ${fmt.score(s.mean)} / 5`)}
+      ${kpi('Overall satisfaction rating', `${fmt.pct(s.css)}`, `<span class="pill ${b.cls}">${b.label}</span> &nbsp;weighted mean ${fmt.score(s.mean)} / 5`)}
       ${kpi('Satisfied clients', fmt.pct(s.satisfiedPct), 'Agree or strongly agree with SQD0')}
       ${kpi('Respondents', fmt.num(s.n), filters.period ? periodLabel(filters.period) : 'All periods')}
       ${kpi('Response rate', rr ? fmt.pct(rr.pct) : '<small>Not tracked</small>', rr ? `${fmt.num(rr.resp)} of ${fmt.num(rr.served)} clients served` : 'Enter clients served in Admin')}
-      ${kpi('Offices evaluated', fmt.num(officeStats.length), `Target: ${Store.settings.target}% satisfied`)}
+      ${kpi('Offices evaluated', fmt.num(officeStats.length), `Target: ${Store.settings.target}% CSS score`)}
     </div>`);
 
     if (!rows.length) { body.insertAdjacentHTML('beforeend', '<div class="card muted">No responses match these filters.</div>'); return; }
@@ -86,10 +86,10 @@
     body.insertAdjacentHTML('beforeend', `
       <div class="grid g2">
         <div class="card"><h3>Overall satisfaction trend</h3><p class="small muted">CSS score (bars: number of responses) by ${Store.settings.periodType}.</p><div class="chart-box"><canvas id="cTrend"></canvas></div></div>
-        <div class="card"><h3>Ratings by service dimension</h3><p class="small muted">Share of Agree / Strongly Agree for each statement.</p><div class="chart-box dimensions-chart"><canvas id="cDims"></canvas></div></div>
+        <div class="card"><h3>Ratings by service dimension</h3><p class="small muted">Weighted mean of each statement as a percentage (mean ÷ 5 × 100).</p><div class="chart-box dimensions-chart"><canvas id="cDims"></canvas></div></div>
       </div>
       <div class="card"><div class="section-head"><div><h3>Satisfaction by office or service unit</h3><p class="small muted">Click a domain office to see its offices or departments. Offices with fewer than ${Store.settings.minResponses} responses are shown in grey.</p></div></div>
-        <div class="table-wrap"><table id="officeTable"><thead><tr><th>Office</th><th class="num">Responses</th><th class="num">Avg (1–5)</th><th style="width:22%">CSS score</th><th class="num">%</th><th>Rating</th></tr></thead><tbody></tbody></table></div>
+        <div class="table-wrap"><table id="officeTable"><thead><tr><th>Office</th><th class="num">Responses</th><th class="num">Weighted mean</th><th style="width:22%">CSS score</th><th class="num">%</th><th>Rating</th></tr></thead><tbody></tbody></table></div>
       </div>
       <div class="card"><div class="section-head"><div><h3>Comparison across reporting periods</h3><p class="small muted">Each dimension's CSS score per period.</p></div></div><div class="table-wrap" id="periodCompare"></div></div>`);
 
@@ -112,8 +112,8 @@
     // Dimensions
     chart(body.querySelector('#cDims'), {
       type: 'bar',
-      data: { labels: SQD.map(q => q.code + ' ' + q.short), datasets: [{ label: '% satisfied', data: s.items.map(i => i.pct == null ? null : +i.pct.toFixed(1)), backgroundColor: s.items.map(i => i.pct >= Store.settings.target ? C.brand : C.gold), borderRadius: 4 }] },
-      options: { indexAxis: 'y', maintainAspectRatio: false, scales: { x: { min: 0, max: 100 }, y: { ticks: { callback(value) { return this.chart.width < 550 ? SQD[value]?.code : this.getLabelForValue(value); } } } }, plugins: { legend: { display: false }, tooltip: { callbacks: { title: items => SQD[items[0]?.dataIndex]?.code + ' ' + SQD[items[0]?.dataIndex]?.short, label: c => ` ${c.raw}% satisfied · avg ${fmt.score(s.items[c.dataIndex].mean)}` } } } }
+      data: { labels: SQD.map(q => q.code + ' ' + q.short), datasets: [{ label: 'Score (%)', data: s.items.map(i => i.pct == null ? null : +i.pct.toFixed(1)), backgroundColor: s.items.map(i => i.pct >= Store.settings.target ? C.brand : C.gold), borderRadius: 4 }] },
+      options: { indexAxis: 'y', maintainAspectRatio: false, scales: { x: { min: 0, max: 100 }, y: { ticks: { callback(value) { return this.chart.width < 550 ? SQD[value]?.code : this.getLabelForValue(value); } } } }, plugins: { legend: { display: false }, tooltip: { callbacks: { title: items => SQD[items[0]?.dataIndex]?.code + ' ' + SQD[items[0]?.dataIndex]?.short, label: c => ` ${c.raw}% · weighted mean ${fmt.score(s.items[c.dataIndex].mean)} / 5` } } } }
     });
 
     // Office table with expandable units

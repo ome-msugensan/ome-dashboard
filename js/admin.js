@@ -177,10 +177,10 @@
     pane.innerHTML = `<div class="grid g2">
       <div class="card"><h3>Reporting periods and targets</h3>
         <div class="field"><label for="pt">Reporting period</label><select id="pt"><option value="month">Monthly</option><option value="quarter">Quarterly</option><option value="year">Annual</option></select></div>
-        <div class="field"><label for="tg">Satisfaction target (% Agree / Strongly Agree)</label><input type="number" id="tg" min="0" max="100" value="${s.target}"></div>
+        <div class="field"><label for="tg">Target CSS score (%) — 80% equals a weighted mean of 4.00</label><input type="number" id="tg" min="0" max="100" value="${s.target}"></div>
         <div class="field"><label for="mr">Minimum responses before an office is ranked</label><input type="number" id="mr" min="1" value="${s.minResponses}"></div>
-        <h4 style="margin-top:16px">Rating scale</h4><p class="small muted">Lower bound of each rating, in CSS %. Adjust these to match the scale your office reports with (for example, the ARTA guideline).</p>
-        <table><tbody>${s.bands.map((b, i) => `<tr><td><input type="text" data-bl="${i}" value="${esc(b.label)}"></td><td>≥ <input type="number" data-bm="${i}" value="${b.min}" style="width:80px"> %</td></tr>`).join('')}</tbody></table>
+        <h4 style="margin-top:16px">Rating scale</h4><p class="small muted">Lowest weighted mean (1.00–5.00) for each rating. The CSS score is the weighted mean ÷ 5 × 100, so 4.21 equals 84.2%.</p>
+        <table><tbody>${s.bands.map((b, i) => `<tr><td><input type="text" data-bl="${i}" value="${esc(b.label)}"></td><td>≥ <input type="number" data-bm="${i}" value="${b.min}" step="0.01" min="1" max="5" style="width:80px"></td></tr>`).join('')}</tbody></table>
         <div class="btn-row" style="margin-top:14px"><button class="btn" id="saveSet">Save settings</button><button class="btn subtle" id="resetSet">Restore defaults</button></div>
       </div>
       <div class="card"><h3>Office reporting names</h3>
