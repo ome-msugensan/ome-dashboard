@@ -46,6 +46,17 @@
     const doc = $('doc');
     if (sel.kind === 'compare') doc.innerHTML = compareReport(all, pt);
     else doc.innerHTML = cssReport(all, pt, sel.kind === 'office');
+    // Keep report columns readable on narrow screens without widening the page.
+    doc.querySelectorAll('table').forEach(table => {
+      if (table.closest('.table-wrap')) return;
+      const scroller = document.createElement('div');
+      scroller.className = 'table-wrap';
+      scroller.setAttribute('role', 'region');
+      scroller.setAttribute('aria-label', 'Scrollable report table');
+      scroller.tabIndex = 0;
+      table.before(scroller);
+      scroller.append(table);
+    });
   }
 
   function header(title, sub) {

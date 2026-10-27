@@ -1,10 +1,8 @@
-/* Survey response management - authorized personnel only.
- * Prototype: the passcode check happens in the browser and is NOT real security. */
+/* Survey response management for signed-in OME personnel. */
 (function () {
   'use strict';
   const O = window.OME;
   const { Store, SQD, summarize, groupBy, periodsOf, periodKey, periodLabel, importForms, fmt, esc } = O;
-  const PASSCODE = 'ome2026';
   let tab = 'import';
   let pending = null; // parsed import awaiting confirmation
 
@@ -13,33 +11,52 @@
     document.body.append(t); setTimeout(() => t.remove(), 2600);
   }
 
-  function authed() { try { return sessionStorage.getItem('ome-admin') === '1'; } catch (e) { return false; } }
+  function authed() { return Store.authenticated; }
 
   function render(el) {
     if (!authed()) return login(el);
     el.innerHTML = `
       <div class="section-head"><div><h2>Survey Response Management</h2><p class="muted">For authorized OME personnel only.</p></div>
         <button class="btn subtle" id="logout">Sign out</button></div>
-      <div class="subtabs">${[['import', 'Import survey results'], ['validate', 'Validate response counts'], ['categories', 'Manage reporting categories'], ['findings', 'Upload summarized findings']]
+      <div class="subtabs">${[['import', 'Import survey results'], ['respondents', 'Respondent details'], ['validate', 'Validate response counts'], ['categories', 'Manage reporting categories'], ['findings', 'Upload summarized findings']]
         .map(([k, l]) => `<button data-tab="${k}" class="${tab === k ? 'active' : ''}">${l}</button>`).join('')}</div>
       <div id="pane"></div>`;
-    el.querySelector('#logout').onclick = () => { try { sessionStorage.removeItem('ome-admin'); } catch (e) { } render(el); };
+    el.querySelector('#logout').onclick = async () => {
+      try { await Store.logout(); location.hash = '#/login'; location.reload(); } catch (error) { toast(error.message); }
+    };
     el.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { tab = b.dataset.tab; render(el); });
     const pane = el.querySelector('#pane');
-    ({ import: importPane, validate: validatePane, categories: categoriesPane, findings: findingsPane })[tab](pane, () => render(el));
+    ({ import: importPane, respondents: respondentsPane, validate: validatePane, categories: categoriesPane, findings: findingsPane })[tab](pane, () => render(el));
   }
 
   function login(el) {
-    el.innerHTML = `<div class="card login"><h2>Authorized personnel</h2>
-      <p class="muted small">Sign in to import results, validate counts, manage reporting categories and upload findings.</p>
-      <form id="lf"><div class="field"><label for="pc">Passcode</label><input type="password" id="pc" style="width:100%" autocomplete="current-password"></div>
-      <div class="error-text" id="le"></div><button class="btn" type="submit">Sign in</button></form>
-      <p class="callout small" style="margin-top:16px">Prototype: the demo passcode is <b>${PASSCODE}</b>. Real sign-in (for example, MSU Google accounts) gets added when the site is connected to a backend.</p></div>`;
-    el.querySelector('#lf').onsubmit = e => {
-      e.preventDefault();
-      if (el.querySelector('#pc').value === PASSCODE) { try { sessionStorage.setItem('ome-admin', '1'); } catch (er) { } render(el); }
-      else el.querySelector('#le').textContent = 'Incorrect passcode.';
-    };
+    el.innerHTML = '<div class="card login"><h2>Admin sign-in required</h2><p>Sign in with an OME staff account to manage survey data.</p><a class="btn" href="#/login">Sign in</a></div>';
+  }
+
+  async function respondentsPane(pane) {
+    pane.innerHTML = '<div class="card"><h3>Respondent details</h3><p class="small muted">Loading details…</p></div>';
+    try {
+      const { respondents } = await Store.respondentDetails();
+      if (!pane.isConnected) return;
+      pane.innerHTML = `<div class="card"><h3>Respondent details</h3>
+        <p class="small muted">Only signed-in OME personnel can view these details. Historical imported responses have no saved personal details.</p>
+        <p class="small">${respondents.length} site submission${respondents.length === 1 ? '' : 's'} with saved details</p>
+        ${respondents.length ? `<div class="btn-row"><button class="btn subtle" id="exportRespondents">Export respondent details (CSV)</button></div>
+        <div class="table-wrap"><table><thead><tr><th>Reference</th><th>Date</th><th>Legal name</th><th>Contact</th><th>Email</th><th>Office</th><th>Unit</th><th>Service</th><th>Staff</th></tr></thead><tbody>
+          ${respondents.map(r => `<tr><td>${esc(r.id)}</td><td>${esc(r.date)}</td><td>${esc(r.legalName)}</td><td>${esc(r.contact)}</td><td>${esc(r.email)}</td><td>${esc(r.office)}</td><td>${esc(r.unit)}</td><td>${esc(r.service)}</td><td>${esc(r.staff)}</td></tr>`).join('')}
+        </tbody></table></div>` : '<p class="muted">No new site submissions yet.</p>'}</div>`;
+      const exportButton = pane.querySelector('#exportRespondents');
+      if (exportButton) exportButton.onclick = () => {
+        const columns = ['id', 'date', 'legalName', 'contact', 'email', 'office', 'unit', 'service', 'staff'];
+        const safeCell = value => /^[=+\-@\t\r]/.test(String(value || '')) ? "'" + value : value;
+        O.downloadText('respondent-details.csv', O.toCSV([
+          ['Reference', 'Date', 'Legal name', 'Contact', 'Email', 'Office', 'Unit', 'Service', 'Staff'],
+          ...respondents.map(r => columns.map(c => safeCell(r[c] || '')))
+        ]));
+      };
+    } catch (error) {
+      if (pane.isConnected) pane.innerHTML = `<div class="card"><h3>Respondent details</h3><p class="error-text">${esc(error.message)}</p></div>`;
+    }
   }
 
   /* ---------- Import ---------- */
@@ -61,9 +78,7 @@
         </tbody></table>
         <div class="btn-row" style="margin-top:14px">
           <button class="btn subtle" id="exportSubs" ${Store.submissions().length ? '' : 'disabled'}>Export site submissions (CSV)</button>
-          <button class="btn danger" id="reset">Reset prototype data</button>
         </div>
-        <p class="small muted" style="margin-top:10px">Reset restores the built-in dataset and removes site submissions, findings, clients-served counts and settings stored in this browser.</p>
       </div></div>`;
 
     const dz = pane.querySelector('#dz'), file = pane.querySelector('#file');
@@ -72,7 +87,6 @@
     dz.ondragover = e => { e.preventDefault(); dz.classList.add('drag'); };
     dz.ondragleave = () => dz.classList.remove('drag');
     dz.ondrop = e => { e.preventDefault(); dz.classList.remove('drag'); e.dataTransfer.files[0] && read(e.dataTransfer.files[0]); };
-    pane.querySelector('#reset').onclick = () => { if (confirm('Reset all prototype data stored in this browser?')) { Store.resetAll(); toast('Prototype data reset'); rerender(); } };
     pane.querySelector('#exportSubs').onclick = () => {
       const head = ['Reference', 'Date', 'Office', 'Unit', 'Service', 'Gender', 'Client type', 'CC1', 'CC2', 'CC3'].concat(SQD.map(q => q.code)).concat(['Comment']);
       const L = Store.lists;
@@ -102,10 +116,12 @@
         warn(i.routed, 'responses with an extra sub-office answer from another section (form routing; ignored)') + warn(i.missingRatings, 'responses with one or more unanswered ratings (counted as N/A)') + warn(i.outOfRange, 'responses with a rating outside 1–5 (counted as N/A)') +
         (i.unknownOffice.length ? `<li><span class="pill warn">${i.unknownOffice.length}</span> office name(s) not in the current list: ${i.unknownOffice.map(esc).join('; ')}</li>` : '') || '<li><span class="pill good">OK</span> No issues found</li>'}</ul>
       <div class="btn-row" style="margin-top:10px"><button class="btn" id="confirmImport" ${res.rows.length ? '' : 'disabled'}>Replace dataset with these ${fmt.num(res.rows.length)} responses</button></div>`;
-    box.querySelector('#confirmImport').onclick = () => {
-      const ok = Store.replaceImported(pending.rows, { source: name, importedAt: new Date().toLocaleString(), rows: pending.rows.length });
-      toast(ok ? 'Import complete' : 'Could not save: browser storage is full');
-      pending = null; rerender();
+    box.querySelector('#confirmImport').onclick = async () => {
+      const button = box.querySelector('#confirmImport'); button.disabled = true;
+      try {
+        await Store.replaceImported(pending.rows, { source: name });
+        toast('Import complete'); pending = null; rerender();
+      } catch (error) { toast(error.message); button.disabled = false; }
     };
   }
 
@@ -148,7 +164,10 @@
         }).join('')}
         <tr class="total"><td>Total</td>${periods.map(p => `<td class="num">${rows.filter(r => periodKey(r.date, pt) === p).length}</td>`).join('')}<td class="num">${rows.length}</td></tr>
         </tbody></table></div></div>`;
-    pane.querySelectorAll('input[data-k]').forEach(i => i.onchange = () => { Store.setServed(i.dataset.k, +i.value || 0); validatePane(pane); toast('Saved'); });
+    pane.querySelectorAll('input[data-k]').forEach(i => i.onchange = async () => {
+      try { await Store.setServed(i.dataset.k, +i.value || 0); validatePane(pane); toast('Saved'); }
+      catch (error) { toast(error.message); }
+    });
   }
 
   /* ---------- Categories ---------- */
@@ -173,15 +192,20 @@
         <table><tbody>${SQD.map(q => `<tr><td><b>${q.code}</b></td><td>${esc(q.dim)}</td><td class="small muted">${esc(q.short)}</td></tr>`).join('')}</tbody></table>
       </div></div>`;
     pane.querySelector('#pt').value = s.periodType;
-    pane.querySelector('#saveSet').onclick = () => {
+    pane.querySelector('#saveSet').onclick = async () => {
       const aliases = {};
       pane.querySelectorAll('[data-alias]').forEach(i => { if (i.value.trim()) aliases[offices[+i.dataset.alias]] = i.value.trim(); });
       const bands = s.bands.map((b, i) => ({ label: pane.querySelector(`[data-bl="${i}"]`).value.trim() || b.label, min: +pane.querySelector(`[data-bm="${i}"]`).value || 0 })).sort((a, b) => b.min - a.min);
-      Store.saveSettings({ periodType: pane.querySelector('#pt').value, target: +pane.querySelector('#tg').value || 80, minResponses: +pane.querySelector('#mr').value || 1, bands, aliases });
-      O.filters.period = '';
-      toast('Settings saved'); rerender();
+      try {
+        await Store.saveSettings({ periodType: pane.querySelector('#pt').value, target: +pane.querySelector('#tg').value || 80, minResponses: +pane.querySelector('#mr').value || 1, bands, aliases });
+        O.filters.period = '';
+        toast('Settings saved'); rerender();
+      } catch (error) { toast(error.message); }
     };
-    pane.querySelector('#resetSet').onclick = () => { Store.resetSettings(); toast('Defaults restored'); rerender(); };
+    pane.querySelector('#resetSet').onclick = async () => {
+      try { await Store.resetSettings(); toast('Defaults restored'); rerender(); }
+      catch (error) { toast(error.message); }
+    };
   }
 
   /* ---------- Findings ---------- */
@@ -200,7 +224,7 @@
           <div class="field"><label for="fp">Period</label><select id="fp" style="width:100%"><option value="">All periods</option>${periods.map(p => `<option value="${p}">${periodLabel(p)}</option>`).join('')}</select></div></div>
           <div class="field"><label class="req" for="fs">Summary of findings</label><textarea id="fs"></textarea></div>
           <div class="field"><label for="fa">Recommendations / action plan</label><textarea id="fa"></textarea></div>
-          <div class="field"><label for="ffile">Attachment (PDF, DOCX or XLSX, up to 1 MB in this prototype)</label><input type="file" id="ffile" accept=".pdf,.doc,.docx,.xls,.xlsx"></div>
+          <div class="field"><label for="ffile">Attachment (PDF, DOCX or XLSX, up to 1 MB)</label><input type="file" id="ffile" accept=".pdf,.doc,.docx,.xls,.xlsx"></div>
           <div class="error-text" id="fe"></div>
           <button class="btn" type="submit">Save findings</button>
         </form></div>
@@ -208,18 +232,23 @@
         ${list.length ? list.map(f => `<div class="quote"><b>${esc(f.title)}</b><div class="meta">${esc(f.office || 'All offices')} · ${f.period ? periodLabel(f.period) : 'All periods'} · added ${esc(f.added)}${f.fileName ? ' · 📎 ' + esc(f.fileName) : ''}</div>
           <p class="small" style="white-space:pre-wrap;margin:6px 0">${esc(f.findings)}</p><button class="btn danger" data-del="${f.id}" style="padding:3px 10px;font-size:.8rem">Remove</button></div>`).join('') : '<p class="muted">Nothing uploaded yet.</p>'}
       </div></div>`;
-    pane.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { Store.removeFinding(b.dataset.del); rerender(); });
+    pane.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+      try { await Store.removeFinding(b.dataset.del); rerender(); }
+      catch (error) { toast(error.message); }
+    });
     pane.querySelector('#ff').onsubmit = e => {
       e.preventDefault();
       const v = id => pane.querySelector('#' + id).value.trim();
       if (!v('ft') || !v('fs')) { pane.querySelector('#fe').textContent = 'Title and summary are required.'; return; }
-      const finish = (fileName, fileData) => {
-        const ok = Store.addFinding({ id: 'f' + Date.now(), title: v('ft'), office: v('fo'), period: v('fp'), findings: v('fs'), actions: v('fa'), fileName, fileData, added: new Date().toLocaleDateString() });
-        toast(ok ? 'Findings saved' : 'Could not save: browser storage is full'); rerender();
+      const finish = async (fileName, fileData) => {
+        try {
+          await Store.addFinding({ title: v('ft'), office: v('fo'), period: v('fp'), findings: v('fs'), actions: v('fa'), fileName, fileData });
+          toast('Findings saved'); rerender();
+        } catch (error) { pane.querySelector('#fe').textContent = error.message; }
       };
       const f = pane.querySelector('#ffile').files[0];
       if (!f) return finish('', '');
-      if (f.size > 1024 * 1024) return finish(f.name, ''); // keep the name only
+      if (f.size > 1024 * 1024) { pane.querySelector('#fe').textContent = 'The attachment must be 1 MB or smaller.'; return; }
       const r = new FileReader(); r.onload = () => finish(f.name, r.result); r.readAsDataURL(f);
     };
   }

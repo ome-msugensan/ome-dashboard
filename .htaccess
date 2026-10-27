@@ -1,0 +1,10 @@
+Options -Indexes
+RewriteEngine On
+RewriteCond %{HTTP:X-Forwarded-Proto} !https
+RewriteCond %{HTTPS} off
+RewriteCond %{HTTP:CF-Visitor} !{"scheme":"https"}
+RewriteRule (.*) https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+RewriteRule ^(private|db|scripts|tools|node_modules|\.git)/ - [F,L,NC]
+<FilesMatch "^(data\.js|router\.php|package(-lock)?\.json|README\.md)$">
+  Require all denied
+</FilesMatch>

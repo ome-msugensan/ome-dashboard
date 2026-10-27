@@ -6,3 +6,9 @@ Assets/
 .DS_Store
 Thumbs.db
 .claude/
+node_modules/
+private/config.php
+private/config.local-backup.php
+private/local-admin-password.php
+# Downloaded production snapshot: contains accounts and survey records.
+db/if0_42396485_ome_website.sql

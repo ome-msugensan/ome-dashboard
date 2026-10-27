@@ -1,5 +1,4 @@
-/* Data store, metrics and CSV import for the CSS prototype.
- * Everything is kept in the browser (localStorage); there is no server. */
+/* Shared survey data, metrics and CSV import. Persistent data lives in MySQL. */
 (function () {
   'use strict';
 
@@ -42,56 +41,60 @@
     aliases: {}               // office name -> reporting name
   };
 
-  const KEY = 'ome-css-proto-v1';
-  const seed = window.CSS_SEED;
+  const seed = window.OME_BOOTSTRAP;
   const form = seed.form;
   // Domain office -> its sub-offices or departments, in the order of the Google Form.
   const hierarchy = {};
   form.structure.forEach(s => { hierarchy[s.office] = s.units; });
   const UNIT_COLS = 15; // export columns P..AD hold the sub-office answer of form sections 1..15
 
-  function load() {
-    try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; }
+  let state = seed;
+  async function request(path, method = 'GET', body) {
+    const res = await fetch(path, {
+      method, credentials: 'same-origin', cache: 'no-store',
+      headers: body === undefined ? {} : { 'Content-Type': 'application/json' },
+      body: body === undefined ? undefined : JSON.stringify(body)
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+    return data;
   }
-  let state = load();
-  function save() {
-    try { localStorage.setItem(KEY, JSON.stringify(state)); return true; } catch (e) { return false; }
-  }
-
-  function unpackSeed() {
-    const L = seed.lists, U = seed.units;
-    return seed.rows.map((r, i) => ({
-      id: 's' + i, date: r[0], office: L.offices[r[1]], unit: r[2] >= 0 ? U[r[2]] : '',
-      gender: L.genders[r[3]], type: L.types[r[4]].trim(),
-      cc1: r[5], cc2: r[6], cc3: r[7], sqd: r[8].split('').map(Number), comment: r[9], routed: !!r[10], source: 'sheet'
-    }));
+  async function mutate(path, method, body) {
+    const result = await request(path, method, body);
+    try { state = await request('/api.php?action=bootstrap'); }
+    catch (error) {
+      console.error('Saved, but could not refresh the latest data:', error);
+      setTimeout(() => location.reload(), 1500);
+    }
+    return result;
   }
 
   const Store = {
     SQD, THEMES, form, lists: seed.lists, hierarchy, structure: form.structure,
     unitKind(office) { const s = form.structure.find(x => x.office === office); return s && s.unitKind; },
     get settings() { return Object.assign({}, DEFAULT_SETTINGS, state.settings || {}); },
-    saveSettings(s) { state.settings = s; save(); },
-    resetSettings() { delete state.settings; save(); },
+    get authenticated() { return Boolean(state.authenticated); },
+    get user() { return state.user || null; },
+    async login(email, password) { return mutate('/api.php?action=login', 'POST', { email, password }); },
+    async logout() { return mutate('/api.php?action=logout', 'POST'); },
+    async respondentDetails() { return request('/api.php?action=respondents'); },
+    async saveSettings(s) { return mutate('/api.php?action=save-settings', 'POST', s); },
+    async resetSettings() { return mutate('/api.php?action=reset-settings', 'POST'); },
 
-    baseRows() { return state.imported ? state.imported : unpackSeed(); },
+    baseRows() { return state.baseRows || []; },
     submissions() { return state.submissions || []; },
     all() {
       const alias = this.settings.aliases;
       return this.baseRows().concat(this.submissions()).map(r => alias[r.office] ? Object.assign({}, r, { office: alias[r.office], originalOffice: r.office }) : r);
     },
-    addSubmission(rec) {
-      state.submissions = this.submissions().concat([rec]);
-      return save();
-    },
-    replaceImported(rows, meta) { state.imported = rows; state.importMeta = meta; return save(); },
-    importMeta() { return state.importMeta || { source: seed.source, exported: seed.exported, rows: seed.rows.length, builtIn: true }; },
+    async addSubmission(rec) { return mutate('/api.php?action=submissions', 'POST', rec); },
+    async replaceImported(rows, meta) { return mutate('/api.php?action=import', 'POST', { rows, source: meta.source }); },
+    importMeta() { return state.importMeta || {}; },
     clientsServed() { return state.served || {}; },
-    setServed(key, n) { state.served = this.clientsServed(); if (n > 0) state.served[key] = n; else delete state.served[key]; save(); },
+    async setServed(key, n) { const [office, period] = key.split('||'); return mutate('/api.php?action=served', 'POST', { office, period, clients: n }); },
     findings() { return state.findings || []; },
-    addFinding(f) { state.findings = this.findings().concat([f]); return save(); },
-    removeFinding(id) { state.findings = this.findings().filter(f => f.id !== id); save(); },
-    resetAll() { state = {}; save(); }
+    async addFinding(f) { return mutate('/api.php?action=findings', 'POST', f); },
+    async removeFinding(id) { return mutate('/api.php?action=delete-finding&id=' + encodeURIComponent(id), 'POST'); }
   };
 
   /* ---------- Periods ---------- */
