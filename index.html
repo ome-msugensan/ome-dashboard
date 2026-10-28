@@ -369,7 +369,7 @@
         for (const src of ['js/core.js', 'js/survey.js', 'js/dashboard.js', 'js/reports.js', 'js/admin.js', 'js/licensure.js', 'js/kpi.js', 'js/users.js']) {
           await new Promise((resolve, reject) => {
             const script = document.createElement('script');
-            script.src = src + (src === 'js/survey.js' ? '?v=20261025-survey-v6' : src === 'js/licensure.js' ? '?v=20261025-licensure-v2' : src === 'js/kpi.js' ? '?v=20261026-kpi-v7' : '?v=20261024-responsive-v1'); script.onload = resolve; script.onerror = reject;
+            script.src = src + (src === 'js/survey.js' ? '?v=20261025-survey-v6' : src === 'js/licensure.js' ? '?v=20261025-licensure-v2' : src === 'js/kpi.js' ? '?v=20261026-kpi-v7' : '?v=20261028-weighted-mean-v1'); script.onload = resolve; script.onerror = reject;
             document.body.append(script);
           });
         }
