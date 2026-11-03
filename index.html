@@ -4,13 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>OME Dashboard</title>
-  <meta name="description" content="Client Satisfaction Survey and licensure performance dashboards of the Office of Monitoring and Evaluation, MSU – General Santos.">
+  <meta name="description" content="Client Satisfaction Survey, licensure, KPI and financial performance dashboards of the Office of Monitoring and Evaluation, MSU – General Santos.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="icon" type="image/png" href="img/favicon.png">
   <link rel="stylesheet" href="css/styles.css?v=20261025-licensure-v2">
   <link rel="stylesheet" href="css/survey.css?v=20261025-survey-v6">
   <link rel="stylesheet" href="css/kpi.css?v=20261026-kpi-v7">
+  <link rel="stylesheet" href="css/finance.css?v=20261103-finance-v1">
   <style>
     .account-actions { margin-left: auto; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 0; color: #fff; font: 600 .88rem "Jost", sans-serif; }
     .account-actions #accountName { min-width: 0; overflow-wrap: anywhere; }
@@ -95,7 +96,7 @@
 <body>
   <div class="topbar"><div class="topbar-inner">
     <a class="brand-logo-link" href="./index.html#/home" aria-label="Go to home page"><img class="logo" src="img/ome-logo.png" alt="OME – Office of Monitoring and Evaluation"></a>
-    <div class="brand-text"><div class="brand-title">Office of Monitoring and Evaluation</div><div class="brand-sub">Mindanao State University – General Santos · Surveys and Licensure Performance</div></div>
+    <div class="brand-text"><div class="brand-title">Office of Monitoring and Evaluation</div><div class="brand-sub">Mindanao State University – General Santos · Surveys, Licensure and Financial Performance</div></div>
   </div></div>
   <script>
     // Remove an accidentally duplicated logo in an older uploaded header.
@@ -122,6 +123,7 @@
     <button class="nav-dropdown-toggle" id="surveyMenuToggle" type="button" aria-controls="surveyMenu" aria-expanded="false">Client Satisfaction Survey <span class="nav-chevron" aria-hidden="true"></span></button>
     <button class="nav-dropdown-toggle" id="licensureMenuToggle" type="button" aria-controls="licensureMenu" aria-expanded="false">Licensure <span class="nav-chevron" aria-hidden="true"></span></button>
     <button class="nav-dropdown-toggle" id="kpiMenuToggle" type="button" aria-controls="kpiMenu" aria-expanded="false">University KPI Monitoring <span class="nav-chevron" aria-hidden="true"></span></button>
+    <button class="nav-dropdown-toggle" id="financeMenuToggle" type="button" aria-controls="financeMenu" aria-expanded="false">Financial Performance <span class="nav-chevron" aria-hidden="true"></span></button>
     <div class="account-actions" id="accountActions" hidden><span id="accountName"></span><a class="home-link" href="#/account" data-route="account">My account</a><button id="signOutButton" type="button">Sign out</button></div>
     <button class="mobile-nav-toggle" id="mobileNavToggle" type="button" aria-controls="mobileMenu" aria-expanded="false"><span class="mobile-nav-icon" aria-hidden="true"><i></i><i></i><i></i></span> Menu</button>
     <span class="mobile-nav-current" id="mobileCurrentPage" aria-live="polite">Home</span>
@@ -134,6 +136,7 @@
       <a href="#/licensure" data-route="licensure">Performance Dashboard</a><a href="#/licensure-topnotchers" data-route="licensure-topnotchers">Topnotchers</a><a href="#/licensure-manage" data-route="licensure-manage">Manage Data</a>
     </div>
     <div class="mobile-nav-section"><p class="mobile-nav-heading">University KPI Monitoring</p><a href="#/kpi" data-route="kpi">KPI Dashboard</a><a href="#/kpi-manage" data-route="kpi-manage">Update KPI Data</a></div>
+    <div class="mobile-nav-section"><p class="mobile-nav-heading">Financial Performance</p><a href="#/finance" data-route="finance">Budget Dashboard</a><a href="#/finance-findings" data-route="finance-findings">Findings &amp; Recommendations</a><a href="#/finance-annexes" data-route="finance-annexes">Line Items &amp; Execution Report</a></div>
     <div class="mobile-nav-section"><p class="mobile-nav-heading">Account</p><div class="mobile-nav-account"><span id="mobileAccountName"></span><a href="#/account" data-route="account">My account</a></div><button id="mobileSignOutButton" type="button">Sign out</button></div>
   </div></nav>
   <div class="nav-menu" id="surveyMenu" role="navigation" aria-label="Client Satisfaction Survey pages" hidden>
@@ -150,6 +153,7 @@
     <a href="#/licensure-manage" data-route="licensure-manage">Manage Data</a>
   </div>
   <div class="nav-menu" id="kpiMenu" role="navigation" aria-label="University KPI Monitoring pages" hidden><a href="#/kpi" data-route="kpi">KPI Dashboard</a><a href="#/kpi-manage" data-route="kpi-manage">Update KPI Data</a></div>
+  <div class="nav-menu" id="financeMenu" role="navigation" aria-label="Financial Performance pages" hidden><a href="#/finance" data-route="finance">Budget Dashboard</a><a href="#/finance-findings" data-route="finance-findings">Findings &amp; Recommendations</a><a href="#/finance-annexes" data-route="finance-annexes">Line Items &amp; Execution Report</a></div>
   <template id="authTemplate"><div class="auth-wrap"><div class="auth-card"><h1 id="authTitle">Sign in</h1><p id="authDescription">Use your OME account to access the dashboards and survey.</p>
     <form id="authForm"><div id="authNameField" hidden><label for="authName">Full name</label><input id="authName" autocomplete="name" maxlength="150"></div>
       <label for="authEmail">Email address</label><input id="authEmail" type="email" autocomplete="username" required maxlength="254">
@@ -179,6 +183,7 @@
         <a class="home-option" href="#/reports"><strong>View Reports →</strong><span>Explore summaries of survey responses.</span></a>
         <a class="home-option" href="#/licensure"><strong>Licensure Performance →</strong><span>Explore examination results and topnotchers.</span></a>
         <a class="home-option" href="#/kpi"><strong>University KPI Monitoring →</strong><span>Review strategic directions, annual targets, and accomplishments.</span></a>
+        <a class="home-option" href="#/finance"><strong>Financial Performance →</strong><span>Track GAA budget allocation and utilization, FY 2020–2026.</span></a>
       </div>
     </section>
   </template>
@@ -199,10 +204,12 @@
     const licensureMenuToggle = document.getElementById('licensureMenuToggle');
     const kpiMenu = document.getElementById('kpiMenu');
     const kpiMenuToggle = document.getElementById('kpiMenuToggle');
-    const menus = [[surveyMenu, surveyMenuToggle], [licensureMenu, licensureMenuToggle], [kpiMenu, kpiMenuToggle]];
+    const financeMenu = document.getElementById('financeMenu');
+    const financeMenuToggle = document.getElementById('financeMenuToggle');
+    const menus = [[surveyMenu, surveyMenuToggle], [licensureMenu, licensureMenuToggle], [kpiMenu, kpiMenuToggle], [financeMenu, financeMenuToggle]];
     const mobileMenu = document.getElementById('mobileMenu');
     const mobileNavToggle = document.getElementById('mobileNavToggle');
-    const mobilePageNames = { home: 'Home', dashboard: 'Survey Dashboard', evaluate: 'Evaluate an Office', quality: 'Service Quality', reports: 'Reports', admin: 'Admin', users: 'Users', licensure: 'Licensure Dashboard', 'licensure-topnotchers': 'Topnotchers', 'licensure-manage': 'Manage Data', kpi: 'University KPI Dashboard', 'kpi-manage': 'Update KPI Data', account: 'My account' };
+    const mobilePageNames = { home: 'Home', dashboard: 'Survey Dashboard', evaluate: 'Evaluate an Office', quality: 'Service Quality', reports: 'Reports', admin: 'Admin', users: 'Users', licensure: 'Licensure Dashboard', 'licensure-topnotchers': 'Topnotchers', 'licensure-manage': 'Manage Data', kpi: 'University KPI Dashboard', 'kpi-manage': 'Update KPI Data', finance: 'Financial Performance', 'finance-findings': 'Budget Findings', 'finance-annexes': 'Budget Line Items', account: 'My account' };
     function setMobileMenuOpen(open) {
       mobileMenu.hidden = !open;
       mobileNavToggle.setAttribute('aria-expanded', String(open));
@@ -334,6 +341,7 @@
       surveyMenuToggle.classList.toggle('current', ['dashboard', 'evaluate', 'quality', 'reports', 'admin', 'users'].includes(name));
       licensureMenuToggle.classList.toggle('current', name.startsWith('licensure'));
       kpiMenuToggle.classList.toggle('current', name === 'kpi' || name === 'kpi-manage');
+      financeMenuToggle.classList.toggle('current', name.startsWith('finance'));
       if (name === 'login') { location.hash = '#/home'; return; }
       if (name === 'home') {
         if (appReady) OME.clearCharts();
@@ -366,10 +374,10 @@
         const response = await fetch('/api.php?action=bootstrap', { cache: 'no-store' });
         if (!response.ok) throw new Error('The server could not load the survey data.');
         window.OME_BOOTSTRAP = await response.json();
-        for (const src of ['js/core.js', 'js/survey.js', 'js/dashboard.js', 'js/reports.js', 'js/admin.js', 'js/licensure.js', 'js/kpi.js', 'js/users.js']) {
+        for (const src of ['js/core.js', 'js/survey.js', 'js/dashboard.js', 'js/reports.js', 'js/admin.js', 'js/licensure.js', 'js/kpi.js', 'js/finance.js', 'js/users.js']) {
           await new Promise((resolve, reject) => {
             const script = document.createElement('script');
-            script.src = src + (src === 'js/survey.js' ? '?v=20261025-survey-v6' : src === 'js/licensure.js' ? '?v=20261025-licensure-v2' : src === 'js/kpi.js' ? '?v=20261026-kpi-v7' : '?v=20261028-weighted-mean-v1'); script.onload = resolve; script.onerror = reject;
+            script.src = src + (src === 'js/survey.js' ? '?v=20261025-survey-v6' : src === 'js/licensure.js' ? '?v=20261025-licensure-v2' : src === 'js/kpi.js' ? '?v=20261026-kpi-v7' : src === 'js/finance.js' ? '?v=20261103-finance-v1' : '?v=20261028-weighted-mean-v1'); script.onload = resolve; script.onerror = reject;
             document.body.append(script);
           });
         }
