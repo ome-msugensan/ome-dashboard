@@ -17,7 +17,7 @@ Open `http://127.0.0.1:8000` and sign in with an account from the imported OME d
 ## Set up another MySQL database
 
 1. Create an empty MySQL/MariaDB database with `utf8mb4` encoding.
-2. Import `db/mysql_schema.sql`, `db/auth_schema.sql`, then `db/mysql_seed.sql` into that new database with phpMyAdmin or a MySQL client. Import the seed before any new survey data or CSV imports.
+2. Run `node scripts/build-mysql-assets.js` to generate the local `db/mysql_seed.sql` from `data.js`. Import `db/mysql_schema.sql`, `db/auth_schema.sql`, then the generated seed into that new database with phpMyAdmin or a MySQL client. Import the seed before any new survey data or CSV imports.
 3. Copy `private/config.example.php` to `private/config.php`. Set the database host, port, name, user, password, the admin password hash, a unique 64-character hexadecimal `pii_key`, and the site's exact origin (for example, `https://example.com`). Generate the key with `php -r "echo bin2hex(random_bytes(32)), PHP_EOL;"` and store it securely.
 4. Run the website on PHP 8.0 or later with PDO MySQL and OpenSSL enabled.
 
@@ -72,3 +72,9 @@ For an existing InfinityFree installation with the KPI section already installed
 | `private/config.example.php` | Example local or hosted database configuration |
 | `scripts/build-mysql-assets.js` | Regenerate form metadata and seed SQL from `data.js` |
 | `tools/build_data.py` | Rebuild anonymized `data.js` from a raw Google Forms export |
+
+## Scopus-indexed publications
+
+The Publications menu includes publication records and live department and faculty rankings. Signed-in users can view them; OME administrators can add, edit, and delete author records, including adding multiple authors to a publication. Each author record has the seven spreadsheet fields. Records with the same title, date and venue are grouped as one publication. Rankings count those distinct publications, use dense ranks for ties, and update from the current records. Department rankings include MSU-GSC records with a college and department and can be filtered by year. Faculty rankings include named MSU-GSC authors; the records do not separately identify faculty status. This calculation may differ from the supplied ranking sheet where it omits eligible source rows or uses different college labels.
+
+For an existing installation, back up the database, import `db/publications_schema.sql` and then `db/publications_seed.sql` into the OME database. The seed imports the 180 author rows from the supplied workbook only if the table is empty; do not rerun it after deliberately clearing the table. Upload `index.html`, `publications_api.php`, `js/publications.js`, and `css/publications.css` to the corresponding web directories. Keep `private/config.php` unchanged. The database import and hosted upload are separate from these local code changes.

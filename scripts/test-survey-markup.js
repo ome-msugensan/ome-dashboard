@@ -46,13 +46,14 @@ function verify(root) {
   ome.views.evaluate(element);
 
   assert.match(element.innerHTML, /class="survey-required-note"/);
-  const privacyEnd = element.innerHTML.indexOf('<h3>Client information</h3>');
-  const clientEnd = element.innerHTML.indexOf('<h3>Office and service</h3>');
+  const markup = element.innerHTML.toLowerCase();
+  const privacyEnd = markup.indexOf('<h3>client information</h3>');
+  const clientEnd = markup.indexOf('<h3>office and service</h3>');
   assert.ok(privacyEnd > 0 && clientEnd > privacyEnd, 'Client information must be a separate section');
   assert.ok(element.innerHTML.indexOf('id="legal"') > privacyEnd, 'Legal name belongs with client information');
   assert.ok(element.innerHTML.indexOf('id="cdate"') > privacyEnd, 'Date belongs with client information');
   assert.ok(element.innerHTML.indexOf('id="cdate"') < clientEnd, 'Date must precede office details');
-  assert.match(element.innerHTML, /Comments and submission/);
+  assert.match(element.innerHTML, /Comments and submission/i);
   if (root === omeRoot) assert.doesNotMatch(element.innerHTML, /Question 1 of 11/);
   assert.equal((element.innerHTML.match(/<tr data-q=/g) || []).length, 11);
   assert.equal((element.innerHTML.match(/class="likert-choice"/g) || []).length, 66);
@@ -69,7 +70,12 @@ function verify(root) {
   return root;
 }
 
-for (const root of [omeRoot, publicRoot]) console.log(`Survey markup OK: ${verify(root)}`);
+console.log(`Survey markup OK: ${verify(omeRoot)}`);
+if (fs.existsSync(path.join(publicRoot, 'js', 'survey.js')) && fs.existsSync(path.join(publicRoot, 'private', 'form.json'))) {
+  console.log(`Survey markup OK: ${verify(publicRoot)}`);
+} else {
+  console.log('Standalone survey check skipped: sibling project not present.');
+}
 // The two sites may be updated separately; this check covers shared form behavior only.
 const omeScript = fs.readFileSync(path.join(omeRoot, 'js', 'survey.js'), 'utf8');
 const omeStyle = fs.readFileSync(path.join(omeRoot, 'css', 'survey.css'), 'utf8');

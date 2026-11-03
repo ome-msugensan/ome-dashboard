@@ -1,12 +1,8 @@
-/* "Evaluate an Office" - the public Client Satisfaction Survey form. */
+/* Standalone public Client Satisfaction Survey form, using the OME questionnaire. */
 (function () {
   'use strict';
   const { Store, SQD, esc } = window.OME;
 
-  const F = Store.form;
-  const CONSENT = F.consent;
-  const GENDERS = F.genders.concat(['Other']);
-  const TYPES = F.clientTypes.concat(['Other']);
   const LIKERT = [
     { v: 5, en: 'Strongly Agree', tl: 'Lubos na sumasang-ayon' },
     { v: 4, en: 'Agree', tl: 'Sumasang-ayon' },
@@ -45,6 +41,10 @@
   }
 
   function render(el, opts) {
+    const F = Store.form;
+    const CONSENT = F.consent;
+    const GENDERS = F.genders.concat(['Other']);
+    const TYPES = F.clientTypes.concat(['Other']);
     const preset = (opts && opts.office) || '';
     const todayParts = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Manila', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()).map(part => [part.type, part.value]));
     const today = `${todayParts.year}-${todayParts.month}-${todayParts.day}`;
@@ -70,7 +70,7 @@
         </div>
 
         <div class="card">
-          <h3>Client information</h3>
+          <h3>Client Information</h3>
           <div class="grid g2">
             <div class="field"><label for="legal">Legal name <span class="muted small">(optional)</span></label><input type="text" id="legal" name="legal" autocomplete="name" maxlength="250"></div>
             <div class="field"><label class="req" for="cdate">Date</label><input type="date" id="cdate" name="cdate" value="${today}" max="${today}" required></div>
@@ -84,7 +84,7 @@
         </div>
 
         <div class="card">
-          <h3>Office and service</h3>
+          <h3>Office and Service</h3>
           <div class="grid g2">
             <div class="field"><label class="req survey-label-bilingual" for="office"><span class="survey-label-title">Office / unit / laboratory where the service was availed <span class="survey-required-mark" aria-hidden="true">*</span></span><span class="tl">Opisina, yunit, o laboratoryo kung saan napakinabangan ang serbisyo</span></label>
               <select id="office" name="office"><option value="">Select…</option>${Store.structure.map(o => `<option value="${esc(o.office)}" ${o.office === preset ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}</select></div>
@@ -104,7 +104,7 @@
         </div>
 
         <div class="card">
-          <h3>Service quality</h3>
+          <h3>Service Quality</h3>
           <p class="small muted">Rate how much you agree with each statement. Choose N/A if it does not apply to your transaction.</p>
           <div class="table-wrap survey-rating-wrap"><table class="likert">
             <thead><tr><th scope="col">Statement</th>${LIKERT.map(l => `<th scope="col" title="${esc(l.tl)}">${esc(l.en)}</th>`).join('')}</tr></thead>
@@ -114,8 +114,9 @@
         </div>
 
         <div class="card">
-          <h3>Comments and submission</h3>
+          <h3>Comments and Submission</h3>
           <div class="field"><label for="comment">Comments and recommendations <span class="muted small">(optional)</span><span class="tl">Mga komento at rekomendasyon</span></label><textarea id="comment" name="comment"></textarea></div>
+          <div class="honeypot" aria-hidden="true"><label for="website">Website</label><input type="text" id="website" name="website" tabindex="-1" autocomplete="off"></div>
           <div id="formError" class="error-text" role="alert" tabindex="-1"></div>
           <div class="btn-row"><button class="btn" type="submit">Submit evaluation</button></div>
         </div>
@@ -198,7 +199,7 @@
       let ref;
       try {
         const saved = await Store.addSubmission({
-        consent: true, legalName: val('legal'), contact: val('contact'), email: val('email'), staff: val('staff'),
+        consent: true, website: val('website'), legalName: val('legal'), contact: val('contact'), email: val('email'), staff: val('staff'),
         date: val('cdate'), office: val('office'), unit: val('unit'),
         gender, type: ctype, cc1, cc2: skip ? -1 : radio('cc2'), cc3: skip ? -1 : radio('cc3'),
         sqd: SQD.map((_, i) => radio('sqd' + i)), comment: val('comment'), service: val('service')
@@ -214,8 +215,8 @@
         <h2>Thank you for your feedback!</h2>
         <p>Salamat sa inyong pagsagot. Your evaluation of <b>${esc(val('office'))}</b> has been recorded.</p>
         <p>Reference number <span class="ref">${ref}</span></p>
-        <p class="small muted">Your response is saved and included in the dashboard.</p>
-        <div class="btn-row" style="justify-content:center"><a class="btn" href="#/evaluate">Evaluate another office</a><a class="btn ghost" href="#/dashboard">View dashboard</a></div>
+        <p class="small muted">Your response has been saved for OME reporting.</p>
+        <div class="btn-row" style="justify-content:center"><a class="btn" href="./index.html">Evaluate another office</a></div>
       </div></div>`;
       window.scrollTo(0, 0);
     });
