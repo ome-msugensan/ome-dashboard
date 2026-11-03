@@ -232,6 +232,11 @@ footer.site .inner { max-width: 1240px; margin: 0 auto; padding: 22px 20px 26px;
 .lic-feedback.is-error { border-color: #e5b4b0; background: var(--bad-soft); color: var(--bad); }
 .lic-modal-body > .lic-feedback { margin-bottom: 14px; }
 .lic-chart { height: 340px; position: relative; margin: 18px 20px 22px; }
+.lic-chart-pair { padding: 14px 20px 20px; }
+.lic-chart-scale-note { margin: 0 0 14px; color: var(--muted); font-size: .85rem; }
+.lic-trend-group + .lic-trend-group { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+.lic-trend-group h4 { margin: 0; color: var(--brand-dark); font-size: .95rem; }
+.lic-trend-group .lic-chart { height: 260px; margin: 10px 0 0; }
 .lic-panel > .lic-empty { margin: 20px; }
 .lic-count { margin: 0; font-size: .84rem; font-weight: 700; color: var(--brand-dark); }
 .lic-table-wrap { overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-color: var(--brand-line) transparent; }
@@ -295,6 +300,8 @@ footer.site .inner { max-width: 1240px; margin: 0 auto; padding: 22px 20px 26px;
   .lic-metric output { grid-column: 1 / -1; padding-bottom: 0; }
 }
 @media (max-width: 640px) {
+  .lic-chart-pair { padding: 14px 16px 18px; }
+  .lic-trend-group .lic-chart { height: 230px; margin: 10px 0 0; }
   .lic-filter-heading, .lic-results-head, .lic-panel > .lic-panel-head { padding: 16px; }
   .lic-filters { padding: 16px; }
   .lic-filters label, .lic-filters label:first-child { flex: 1 1 100%; max-width: none; }
