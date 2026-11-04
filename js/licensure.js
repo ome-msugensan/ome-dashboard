@@ -209,10 +209,10 @@
     dialog.addEventListener('click', e => { if (e.target === dialog) close(); });
     dialog.addEventListener('close', () => {
       dialog.remove();
-      if (previousFocus?.isConnected) previousFocus.focus();
+      if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
       else {
         const target = document.querySelector('#view .lic-feedback, #view .section-head h2');
-        if (target) { target.tabIndex = -1; target.focus(); }
+        if (target) { target.tabIndex = -1; target.focus({ preventScroll: true }); }
       }
     });
     dialog.querySelector('form').onsubmit = async e => {
@@ -220,7 +220,11 @@
       const error = dialog.querySelector('.lic-form-error');
       const button = dialog.querySelector('.lic-save');
       error.hidden = true; button.disabled = true;
-      try { await onSubmit(dialog); close(); }
+      try {
+        const afterClose = await onSubmit(dialog);
+        if (typeof afterClose === 'function') closeThen(dialog, afterClose);
+        else close();
+      }
       catch (cause) { error.textContent = cause.message; error.hidden = false; error.focus(); }
       finally { button.disabled = false; }
     };
@@ -250,7 +254,9 @@
     </div>`, async modal => {
       const form = modal.querySelector('form');
       await request('save-topnotcher', { topnotcher_id: item ? num(item.topnotcher_id) : 0, period_id: Number(form.elements.period_id.value), rank_position: Number(form.elements.rank_position.value), full_name: form.elements.full_name.value.trim(), rating: form.elements.rating.value === '' ? null : Number(form.elements.rating.value) });
-      await refresh(); setNotice(item ? 'Topnotcher updated.' : 'Topnotcher added.'); renderTopnotchers(root);
+      await refresh(); setNotice(item ? 'Topnotcher updated.' : 'Topnotcher added.');
+      const { scrollX, scrollY } = window;
+      return () => { renderTopnotchers(root); window.scrollTo(scrollX, scrollY); };
     }, { saveLabel: item ? 'Save changes' : 'Add topnotcher' });
     const pSelect = dialog.querySelector('[name=program_id]'), dSelect = dialog.querySelector('[name=period_id]');
     function sync() {
@@ -304,10 +310,12 @@
     </div>`, async dialog => {
       const f = dialog.querySelector('form').elements;
       await request('save-program', { program_id: num(item?.program_id), program_name: f.program_name.value.trim(), exam_title: f.exam_title.value.trim(), program_key: f.program_key.value.trim(), sort_order: Number(f.sort_order.value), status: f.status.value });
-      await refresh(); setNotice(item ? 'Program updated.' : 'Program added.'); renderManage(root);
+      await refresh(); setNotice(item ? 'Program updated.' : 'Program added.');
+      const { scrollX, scrollY } = window;
+      return () => { renderManage(root); window.scrollTo(scrollX, scrollY); };
     }, { saveLabel: item ? 'Save changes' : 'Add program' });
   }
-  function periodsModal(root, programId) {
+  function periodsModal(root, programId, restore = null) {
     const course = program(programId);
     const list = state.data.periods.filter(p => num(p.program_id) === programId).sort((a, b) => dateOf(b) - dateOf(a));
     const content = `${feedback()}<p class="muted">${esc(course?.program_name || '')} · ${esc(course?.exam_title || '')}</p><div class="lic-modal-toolbar"><span>${list.length} exam period${list.length === 1 ? '' : 's'}</span><button class="btn" type="button" id="lic-modal-add-period">Add period</button></div>
@@ -316,8 +324,10 @@
     dialog.classList.add('lic-dialog-wide');
     dialog.querySelector('.lic-save').remove();
     dialog.querySelector('.lic-cancel').textContent = 'Close';
-    dialog.querySelector('#lic-modal-add-period').onclick = () => closeThen(dialog, () => periodModal(root, programId));
-    dialog.querySelectorAll('.lic-period-edit').forEach(b => b.onclick = () => { const item = period(b.dataset.id); closeThen(dialog, () => periodModal(root, programId, item)); });
+    if (restore) dialog.querySelector('.lic-modal-body').scrollTop = restore.scrollTop;
+    const returnContext = () => ({ scrollTop: dialog.querySelector('.lic-modal-body').scrollTop });
+    dialog.querySelector('#lic-modal-add-period').onclick = () => { const context = returnContext(); closeThen(dialog, () => periodModal(root, programId, null, context)); };
+    dialog.querySelectorAll('.lic-period-edit').forEach(b => b.onclick = () => { const item = period(b.dataset.id), context = returnContext(); closeThen(dialog, () => periodModal(root, programId, item, context)); });
     dialog.querySelectorAll('.lic-period-delete').forEach(b => b.onclick = async () => {
       const p = period(b.dataset.id);
       if (!await confirmDelete(`Delete ${p.exam_period_label} and all its results and topnotchers?`)) return;
@@ -328,7 +338,7 @@
   function topRow(item = {}) {
     return `<div class="lic-top-row"><label>Rank<input type="number" name="rank" min="1" required value="${item.rank_position ?? ''}"></label><label>Full name<input type="text" name="name" maxlength="255" required value="${esc(item.full_name || '')}"></label><label>Rating (%)<input type="number" name="rating" min="0" max="100" step="0.01" value="${item.rating ?? ''}" placeholder="Optional"></label><button class="btn danger lic-remove-top" type="button" aria-label="Remove topnotcher row">Remove</button></div>`;
   }
-  function periodModal(root, programId, item) {
+  function periodModal(root, programId, item, returnContext = null) {
     const course = program(programId);
     const metrics = [['MSU', 'First', 'MSU first-time'], ['MSU', 'Overall', 'MSU overall'], ['National', 'First', 'National first-time'], ['National', 'Overall', 'National overall']];
     const metricHtml = metrics.map(([group, type, label]) => {
@@ -341,7 +351,13 @@
       modal.querySelectorAll('.lic-metric').forEach(box => { results[box.dataset.key] = { passers: Number(box.querySelector('[name=passers]').value), takers: Number(box.querySelector('[name=takers]').value) }; });
       const topnotchers = [...modal.querySelectorAll('.lic-top-row')].map(row => ({ rank_position: Number(row.querySelector('[name=rank]').value), full_name: row.querySelector('[name=name]').value.trim(), rating: row.querySelector('[name=rating]').value === '' ? null : Number(row.querySelector('[name=rating]').value) }));
       await request('save-period', { period_id: num(item?.period_id), program_id: programId, exam_period_label: label, results, topnotchers });
-      await refresh(); setNotice(item ? 'Exam period updated.' : 'Exam period added.'); renderManage(root);
+      await refresh(); setNotice(item ? 'Exam period updated.' : 'Exam period added.');
+      const { scrollX, scrollY } = window;
+      return () => {
+        renderManage(root);
+        window.scrollTo(scrollX, scrollY);
+        if (returnContext) periodsModal(root, programId, returnContext);
+      };
     }, { saveLabel: item ? 'Save changes' : 'Add exam period' });
     dialog.classList.add('lic-dialog-wide');
     const rows = dialog.querySelector('#lic-top-rows');
