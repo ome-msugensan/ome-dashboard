@@ -3,7 +3,7 @@
   'use strict';
   const O = window.OME;
   const esc = O.esc;
-  const state = { data: null, program: '', from: '', to: '', dateWarning: '', taker: 'First', metric: 'rate', topProgram: '', topPeriod: '', topYear: '', search: '', notice: '', noticeError: false };
+  const state = { data: null, program: '', from: '', to: '', dateWarning: '', taker: 'Both', metric: 'rate', topProgram: '', topPeriod: '', topYear: '', search: '', notice: '', noticeError: false };
   let loadToken = 0;
   let charts = [];
   function clearLicensureCharts() { charts.forEach(chart => chart.destroy()); charts = []; }
@@ -39,7 +39,7 @@
   function results(id) { return state.data.results.filter(r => num(r.period_id) === num(id)); }
   function topnotchers(id) { return state.data.topnotchers.filter(t => num(t.period_id) === num(id)); }
   function result(id, group, taker) { return results(id).find(r => r.group_type === group && r.taker_type === taker); }
-  function rate(row) { return row ? num(row.rate).toFixed(2) + '%' : '—'; }
+  function rate(row) { const value = row?.rate; return value === null || value === undefined || value === '' || !Number.isFinite(Number(value)) ? '—' : Number(value).toFixed(2) + '%'; }
   function options(items, value, label, selected, allLabel) {
     return (allLabel === undefined ? '' : `<option value="">${esc(allLabel)}</option>`) + items.map(item =>
       `<option value="${esc(value(item))}" ${String(value(item)) === String(selected) ? 'selected' : ''}>${esc(label(item))}</option>`).join('');
@@ -89,16 +89,16 @@
     const periods = dashboardPeriods();
     const current = program(state.program);
     root.innerHTML = `${head('Licensure Performance Dashboard', 'Compare MSU-GSC and national examination results across reporting periods.', state.data.authenticated ? '<a class="btn ghost" href="#/licensure-manage">Manage data</a>' : '')}
-      <section class="card lic-panel lic-comparison-panel" aria-label="Licensure filters"><div class="lic-filter-heading"><div><span class="lic-eyebrow">Explore results</span><h3>Choose your comparison</h3><p class="muted small">Select a program, reporting period, and taker group. The chart and records update together.</p></div></div><div class="lic-filters lic-dashboard-filters">
+      <section class="card lic-panel lic-comparison-panel" aria-label="Licensure filters"><div class="lic-filter-heading"><div><span class="lic-eyebrow">Explore results</span><h3>Choose your comparison</h3><p class="muted small">Select a program, reporting period, and taker group. The table shows both first-time and overall rates.</p></div></div><div class="lic-filters lic-dashboard-filters">
         <label>Program<select id="lic-program">${options(state.data.programs.filter(p => p.status === 'Active'), p => p.program_id, p => p.program_name, state.program)}</select></label>
         <label>From month<input id="lic-from" type="month" value="${esc(state.from)}"></label>
         <label>To month<input id="lic-to" type="month" value="${esc(state.to)}"></label>
-        <label>Taker type<select id="lic-taker"><option value="First" ${state.taker === 'First' ? 'selected' : ''}>First-time</option><option value="Overall" ${state.taker === 'Overall' ? 'selected' : ''}>Overall</option></select></label>
+        <label>Taker type<select id="lic-taker"><option value="Both" ${state.taker === 'Both' ? 'selected' : ''}>First-time and overall</option><option value="First" ${state.taker === 'First' ? 'selected' : ''}>First-time</option><option value="Overall" ${state.taker === 'Overall' ? 'selected' : ''}>Overall</option></select></label>
         <div class="lic-filter-actions"><button class="btn subtle" id="lic-clear" type="button">Clear dates</button>
         <button class="btn ghost" id="lic-export" type="button">Export data</button></div>
       </div><p class="lic-filter-error" id="lic-date-error" role="status" ${state.dateWarning ? '' : 'hidden'}>${esc(state.dateWarning)}</p></section>
       <section class="card lic-panel"><div class="lic-panel-head"><div><h3>Performance trend</h3><p class="muted small">${esc(current?.exam_title || 'Select a program')} · oldest to latest</p></div><label>View by <select id="lic-metric"><option value="rate" ${state.metric === 'rate' ? 'selected' : ''}>Passing rate (%)</option><option value="passers" ${state.metric === 'passers' ? 'selected' : ''}>Passers</option><option value="takers" ${state.metric === 'takers' ? 'selected' : ''}>Takers</option></select></label></div>
-        ${periods.length ? (state.metric === 'rate' ? '<div class="lic-chart"><canvas id="lic-chart" role="img" aria-label="MSU-GSC and national passing rates by exam period"></canvas></div>' : `<div class="lic-chart-pair"><p class="lic-chart-scale-note">Each chart uses its own vertical scale. Counts are shown for the selected taker type.</p><section class="lic-trend-group"><h4>MSU-GSC ${state.metric}</h4><div class="lic-chart"><canvas id="lic-chart-msu" role="img" aria-label="MSU-GSC ${state.metric} by exam period"></canvas></div></section><section class="lic-trend-group"><h4>National ${state.metric}</h4><div class="lic-chart"><canvas id="lic-chart-national" role="img" aria-label="National ${state.metric} by exam period"></canvas></div></section></div>`) : '<p class="lic-empty">No exam periods match these filters.</p>'}
+        ${periods.length ? (state.metric === 'rate' ? `<div class="lic-chart-pair">${state.taker !== 'Overall' ? '<section class="lic-trend-group"><h4>First-time passing rate</h4><div class="lic-chart"><canvas id="lic-chart-first" role="img" aria-label="MSU-GSC and national first-time passing rates by exam period"></canvas></div></section>' : ''}${state.taker !== 'First' ? '<section class="lic-trend-group"><h4>Overall passing rate</h4><div class="lic-chart"><canvas id="lic-chart-overall" role="img" aria-label="MSU-GSC and national overall passing rates by exam period"></canvas></div></section>' : ''}</div>` : `<div class="lic-chart-pair"><p class="lic-chart-scale-note">Each chart uses its own vertical scale. Counts are shown for the selected taker type.</p><section class="lic-trend-group"><h4>MSU-GSC ${state.metric}</h4><div class="lic-chart"><canvas id="lic-chart-msu" role="img" aria-label="MSU-GSC ${state.metric} by exam period"></canvas></div></section><section class="lic-trend-group"><h4>National ${state.metric}</h4><div class="lic-chart"><canvas id="lic-chart-national" role="img" aria-label="National ${state.metric} by exam period"></canvas></div></section></div>`) : '<p class="lic-empty">No exam periods match these filters.</p>'}
       </section>
       <section class="card lic-panel lic-detail-panel"><div class="lic-panel-head"><div><span class="lic-eyebrow">Examination records</span><h3>Detailed examination results</h3><p class="muted small">${esc(current?.program_name || 'Select a program')} · First-time and overall passing rates</p></div><span class="lic-count-pill">${periods.length} period${periods.length === 1 ? '' : 's'}</span></div>
         ${table(['Exam period', 'MSU first-time', 'MSU overall', 'National first-time', 'National overall'], [...periods].reverse().map(p => `<tr><th scope="row">${esc(p.exam_period_label)}</th><td class="lic-rate">${rate(result(p.period_id, 'MSU', 'First'))}</td><td class="lic-rate">${rate(result(p.period_id, 'MSU', 'Overall'))}</td><td class="lic-rate">${rate(result(p.period_id, 'National', 'First'))}</td><td class="lic-rate">${rate(result(p.period_id, 'National', 'Overall'))}</td></tr>`).join(''), 'No exam periods match these filters.', 'Detailed examination results')}
@@ -114,7 +114,7 @@
   }
   function drawChart(root, periods) {
     clearLicensureCharts();
-    const canvases = [...root.querySelectorAll('#lic-chart, #lic-chart-msu, #lic-chart-national')];
+    const canvases = [...root.querySelectorAll('#lic-chart-first, #lic-chart-overall, #lic-chart-msu, #lic-chart-national')];
     if (!canvases.length) return;
     if (!window.Chart) {
       const fallback = document.createElement('p');
@@ -124,27 +124,30 @@
       container.replaceWith(fallback);
       return;
     }
-    const values = group => periods.map(p => {
-      const row = result(p.period_id, group, state.taker);
+    const values = (group, taker) => periods.map(p => {
+      const row = result(p.period_id, group, taker);
       const raw = row?.[state.metric];
       return raw === null || raw === undefined || raw === '' || !Number.isFinite(Number(raw)) ? null : Number(raw);
     });
-    const datasets = {
-      MSU: { label: 'MSU-GSC', data: values('MSU'), borderColor: '#720455', backgroundColor: '#720455', tension: .25, pointRadius: 4 },
-      National: { label: 'National', data: values('National'), borderColor: '#9a6400', backgroundColor: '#ffab00', borderDash: [6, 4], pointBorderColor: '#9a6400', pointBackgroundColor: '#ffab00', tension: .25, pointRadius: 4 }
+    const types = state.taker === 'Both' ? ['First', 'Overall'] : [state.taker];
+    const dataset = (group, taker) => {
+      const national = group === 'National', overall = taker === 'Overall';
+      const color = national ? (overall ? '#9a6400' : '#c17d00') : (overall ? '#ab4a8f' : '#720455');
+      return { label: `${national ? 'National' : 'MSU-GSC'} · ${overall ? 'Overall' : 'First-time'}`, data: values(group, taker), borderColor: color, backgroundColor: color, borderDash: overall ? [6, 4] : [], pointStyle: overall ? 'triangle' : 'circle', tension: .25, pointRadius: 4 };
     };
     const isRate = state.metric === 'rate';
-    const makeChart = (canvas, groups) => {
-      if (!isRate && datasets[groups[0]].data.every(value => value === null)) {
+    const makeChart = (canvas, groups, chartTypes = types) => {
+      const series = groups.flatMap(group => chartTypes.map(taker => dataset(group, taker)));
+      if (series.every(item => item.data.every(value => value === null))) {
         const message = document.createElement('p'); message.className = 'lic-empty'; message.textContent = 'No data is available for this group and selection.'; canvas.parentElement.replaceWith(message); return;
       }
-      charts.push(new Chart(canvas, { type: 'line', data: { labels: periods.map(p => p.exam_period_label), datasets: groups.map(group => datasets[group]) }, options: {
+      charts.push(new Chart(canvas, { type: 'line', data: { labels: periods.map(p => p.exam_period_label), datasets: series }, options: {
         responsive: true, maintainAspectRatio: false, interaction: { intersect: false, mode: 'index' },
-        plugins: { legend: { display: isRate }, tooltip: { callbacks: { label: context => `${context.dataset.label}: ${context.parsed.y}${isRate ? '%' : ''}` } } },
-        scales: { y: { beginAtZero: true, max: isRate ? 100 : undefined, ticks: isRate ? {} : { precision: 0 }, ...(!isRate ? { afterFit: scale => { scale.width = 70; }, title: { display: true, text: state.metric === 'passers' ? 'Number of passers' : 'Number of takers' } } : {}) } }
+        plugins: { legend: { display: true, labels: { usePointStyle: true } }, tooltip: { callbacks: { label: context => `${context.dataset.label}: ${context.parsed.y}${isRate ? '%' : ''}` } } },
+        scales: { y: { beginAtZero: true, max: isRate ? 100 : undefined, ticks: isRate ? {} : { precision: 0 }, afterFit: scale => { scale.width = 70; }, ...(!isRate ? { title: { display: true, text: state.metric === 'passers' ? 'Number of passers' : 'Number of takers' } } : {}) } }
       } }));
     };
-    if (isRate) makeChart(canvases[0], ['MSU', 'National']);
+    if (isRate) { if (state.taker !== 'Overall') makeChart(root.querySelector('#lic-chart-first'), ['MSU', 'National'], ['First']); if (state.taker !== 'First') makeChart(root.querySelector('#lic-chart-overall'), ['MSU', 'National'], ['Overall']); }
     else { makeChart(root.querySelector('#lic-chart-msu'), ['MSU']); makeChart(root.querySelector('#lic-chart-national'), ['National']); }
   }
   function exportDashboard(periods, current) {
