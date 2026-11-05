@@ -1,4 +1,4 @@
-/* Annual Report: placeholder layout for the OME annual report until its data is available. */
+/* Annual Reports: placeholder layout for the OME annual report until its data is available. */
 (function () {
   'use strict';
   const O = window.OME;
@@ -16,7 +16,7 @@
 
   function annualReport(el) {
     el.innerHTML = `
-      <div class="section-head"><div><span class="ar-eyebrow">Office of Monitoring and Evaluation · Annual Report</span><h2>Annual Report</h2><p class="muted">A yearly summary of the University's performance across client satisfaction, licensure, strategic KPIs, finances and research.</p></div></div>
+      <div class="section-head"><div><span class="ar-eyebrow">Office of Monitoring and Evaluation · Annual Reports</span><h2>Annual Reports</h2><p class="muted">A yearly summary of the University's performance across client satisfaction, licensure, strategic KPIs, finances and research.</p></div></div>
       <div class="stack">
         <div class="card ar-status" role="status">
           <span class="ar-badge">In preparation</span>

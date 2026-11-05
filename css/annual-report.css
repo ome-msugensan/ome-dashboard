@@ -1,4 +1,4 @@
-/* Annual Report: placeholder layout until the report data is available. */
+/* Annual Reports: placeholder layout until the report data is available. */
 .ar-eyebrow { display: block; color: #ffe2a0; font: 700 .77rem var(--font-head); letter-spacing: .1em; text-transform: uppercase; margin-bottom: 5px; }
 .ar-status { display: flex; align-items: flex-start; gap: 16px; border-left: 5px solid var(--gold); background: var(--gold-soft); }
 .ar-status h3 { margin: 0 0 4px; color: var(--brand-dark); }
