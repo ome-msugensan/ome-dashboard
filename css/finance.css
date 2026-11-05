@@ -28,9 +28,8 @@
 .fin-finding-body dl { margin: 10px 0 0; }
 .fin-finding-body dt { margin-top: 10px; color: var(--gold-ink); font: 700 .76rem var(--font-head); letter-spacing: .05em; text-transform: uppercase; }
 .fin-finding-body dd { margin: 3px 0 0; }
-.fin-years { display: flex; flex-wrap: wrap; gap: 6px; }
-.fin-years .btn { min-width: 64px; }
-.fin-years .btn.active { background: var(--brand); color: #fff; }
+.fin-year-filter { display: inline-flex; align-items: center; gap: 10px; color: var(--brand-dark); font: 600 .9rem var(--font-head); }
+.fin-year-filter select { min-width: 140px; min-height: 44px; cursor: pointer; }
 table .fin-total td { background: var(--gold-soft); color: var(--brand-dark); font-weight: 700; }
 .fin-lines td:first-child { width: 18%; }
 .fin-lines, .fin-exec { min-width: 760px; }

@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="css/styles.css?v=20261103-licensure-scales-v1">
   <link rel="stylesheet" href="css/survey.css?v=20261025-survey-v6">
   <link rel="stylesheet" href="css/kpi.css?v=20261026-kpi-v7">
-  <link rel="stylesheet" href="css/finance.css?v=20261103-finance-v1">
+  <link rel="stylesheet" href="css/finance.css?v=20261105-finance-v2">
   <link rel="stylesheet" href="css/publications.css?v=20261029-dialog-restored-v1">
   <style>
     .account-actions { margin-left: auto; display: flex; align-items: stretch; min-width: 0; }
@@ -386,7 +386,7 @@
         for (const src of ['js/core.js', 'js/survey.js', 'js/dashboard.js', 'js/reports.js', 'js/admin.js', 'js/licensure.js', 'js/kpi.js', 'js/finance.js', 'js/publications.js', 'js/users.js']) {
           try { await new Promise((resolve, reject) => {
             const script = document.createElement('script');
-            script.src = src + (src === 'js/survey.js' ? '?v=20261025-survey-v6' : src === 'js/licensure.js' ? '?v=20261104-licensure-save-position-v1' : src === 'js/kpi.js' ? '?v=20261026-kpi-v7' : src === 'js/finance.js' ? '?v=20261103-finance-v1' : src === 'js/publications.js' ? '?v=20261029-dialog-restored-v1' : '?v=20261028-weighted-mean-v1'); script.onload = resolve; script.onerror = () => reject(new Error('Could not load ' + src + '. Check that the file was uploaded to the correct folder.'));
+            script.src = src + (src === 'js/survey.js' ? '?v=20261025-survey-v6' : src === 'js/licensure.js' ? '?v=20261104-licensure-save-position-v1' : src === 'js/kpi.js' ? '?v=20261026-kpi-v7' : src === 'js/finance.js' ? '?v=20261105-finance-v2' : src === 'js/publications.js' ? '?v=20261029-dialog-restored-v1' : '?v=20261028-weighted-mean-v1'); script.onload = resolve; script.onerror = () => reject(new Error('Could not load ' + src + '. Check that the file was uploaded to the correct folder.'));
             document.body.append(script);
           }); } catch (error) {
             if (src !== 'js/publications.js') throw error;

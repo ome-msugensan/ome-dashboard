@@ -233,7 +233,6 @@
   ];
 
   /* ------------------------------ Helpers ------------------------------ */
-  const sum = arr => arr.reduce((a, b) => a + b, 0);
   const total = i => GAA.ps[i] + GAA.mooe[i] + GAA.co[i];
   const M = v => v / 1e6;
   const fmtM = (v, d = 2) => Number(v).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -241,7 +240,6 @@
   const fmtPeso2 = v => Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const pct = (a, b, d = 1) => b ? (a / b * 100).toFixed(d) + '%' : '—';
   const signed = (v, d = 2) => (v > 0 ? '+' : v < 0 ? '−' : '') + fmtM(Math.abs(v), d);
-  const kpi = (label, value, foot) => `<div class="card kpi"><div class="label">${label}</div><div class="value">${value}</div><div class="foot">${foot || ''}</div></div>`;
   const yearLabels = YEARS.map(y => y === 2026 ? '2026 (Jul)' : String(y));
   const moneyTick = v => '₱' + Number(v).toLocaleString('en-US') + 'M';
 
@@ -257,19 +255,8 @@
 
   /* ------------------------------ Budget dashboard ------------------------------ */
   function dashboard(el) {
-    const first = total(0), last = total(6);
-    const peak = Math.max(...YEARS.map((_, i) => total(i)));
-    const unpaid2025 = sum(BMO.filter(r => r.cls === 'Total' && r.year <= 2025).map(r => r.unpaid));
     el.innerHTML = head('University Financial Performance', 'GAA budget allocation and utilization of MSU – General Santos, FY 2020–2026: appropriations, allotments, obligations and disbursements by expense class.') + subnav('finance') + `
       <div class="stack fin-page">
-        <div class="grid kpis">
-          ${kpi('FY 2026 GAA appropriation', '₱' + fmtM(M(last)) + '<small>M</small>', `+${((last / first - 1) * 100).toFixed(0)}% from ₱${fmtM(M(first))}M in FY 2020`)}
-          ${kpi('Peak appropriation', '₱' + fmtM(peak / 1e9) + '<small>B</small>', 'FY 2024 · major Capital Outlay additions')}
-          ${kpi('FY 2026 release rate', pct(RELEASE.allot[6], RELEASE.approp[6]), '93–97% in most years; 37.1% in FY 2025')}
-          ${kpi('Obligation rate, FY 2020–2025', '≥97.8%', 'Of allotments obligated each year (97.8–100%)')}
-          ${kpi('Unpaid obligations, FY 2020–2025', '₱' + fmtM(M(unpaid2025)) + '<small>M</small>', 'Year-end balances; about 97% Capital Outlay')}
-        </div>
-
         <div class="card">
           <h3>Release rates held at 93–97% every year except 2025</h3>
           <p class="small muted">Appropriation vs. allotment, PhP millions. The percentage is the share of the appropriation released by DBM.</p>
@@ -486,8 +473,9 @@
         <tr class="fin-total"><td colspan="2">TOTAL, MSU-General Santos (${annexYear})</td><td class="num">${fmtPeso(GAA.ps[i])}</td><td class="num">${fmtPeso(GAA.mooe[i])}</td><td class="num">${fmtPeso(GAA.co[i])}</td><td class="num">${fmtPeso(total(i))}</td></tr>
       </tbody></table></div>`;
       el.querySelector('#finLines').innerHTML = `<p class="small muted">Annex ${data.annex}. GAA FY ${annexYear} line items.</p>${lineTable}<p class="fin-note">Source: ${esc(data.source)}</p>`;
-      el.querySelectorAll('[data-year]').forEach(b => { const on = Number(b.dataset.year) === annexYear; b.classList.toggle('active', on); b.setAttribute('aria-pressed', String(on)); });
     };
+    // Years come from the line-item data, newest first, so a newly added fiscal year appears in the filter on its own.
+    const lineYears = Object.keys(LINES).map(Number).sort((a, b) => b - a);
     el.innerHTML = head('Line Items & Execution Report', 'The data behind the review: GAA line items for each fiscal year and the Budget Management Office\'s budget execution report.') + subnav('finance-annexes') + `
       <div class="stack fin-page">
         <div class="card">
@@ -499,7 +487,7 @@
         </div>
         <div class="card">
           <div class="fin-card-head"><h3>Annexes B–H. GAA line items by fiscal year</h3>
-            <div class="fin-years" role="group" aria-label="Fiscal year">${YEARS.map(y => `<button type="button" class="btn ghost" data-year="${y}">${y}</button>`).join('')}</div></div>
+            <label class="fin-year-filter">Filter by year<select id="finYear">${lineYears.map(y => `<option value="${y}"${y === annexYear ? ' selected' : ''}>FY ${y}</option>`).join('')}</select></label></div>
           <div id="finLines"></div>
         </div>
         <div class="card">
@@ -512,7 +500,7 @@
         </div>
         ${sourceNote}
       </div>`;
-    el.querySelectorAll('[data-year]').forEach(b => b.addEventListener('click', () => { annexYear = Number(b.dataset.year); render(); }));
+    el.querySelector('#finYear').addEventListener('change', event => { annexYear = Number(event.target.value); render(); });
     render();
   }
 
