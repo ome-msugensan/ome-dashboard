@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="css/kpi.css?v=20261026-kpi-v7">
   <link rel="stylesheet" href="css/finance.css?v=20261105-finance-v2">
   <link rel="stylesheet" href="css/publications.css?v=20261029-dialog-restored-v1">
+  <link rel="stylesheet" href="css/annual-report.css?v=20261105-annual-report-v1">
   <style>
     .account-actions { margin-left: auto; display: flex; align-items: stretch; min-width: 0; }
     .auth-wrap { display: grid; place-items: center; min-height: min(650px, 75vh); padding: 36px 16px; }
@@ -88,6 +89,8 @@
       .mobile-nav-panel #mobileSignOutButton { width: 100%; min-height: 44px; margin-top: 5px; border: 1px solid #720455; border-radius: 7px; background: #fff; color: #720455; font: 700 .9rem "Jost", sans-serif; cursor: pointer; }
       .mobile-nav-panel #mobileSignOutButton:hover { background: #f7eaf3; }
     }
+    /* Eight top-level items: tighten spacing on smaller desktop screens so Account stays in view. */
+    @media (min-width: 1025px) and (max-width: 1279px) { nav.tabs .inner { gap: 0; } nav.tabs .home-link, nav.tabs .nav-dropdown-toggle { gap: 7px; padding-left: 11px; padding-right: 11px; font-size: .9rem; } }
     @media (max-width: 480px) { .auth-card { padding: 22px 18px; } .home-hero { padding: 26px 20px; } .home-hero h1 { font-size: clamp(1.7rem, 8vw, 2.2rem); } .home-actions a { width: 100%; } .home-option { min-height: 0; padding: 18px; } }
   </style>
 </head>
@@ -123,6 +126,7 @@
     <button class="nav-dropdown-toggle" id="kpiMenuToggle" type="button" aria-controls="kpiMenu" aria-expanded="false">University KPIs <span class="nav-chevron" aria-hidden="true"></span></button>
     <button class="nav-dropdown-toggle" id="financeMenuToggle" type="button" aria-controls="financeMenu" aria-expanded="false">Financial Performance <span class="nav-chevron" aria-hidden="true"></span></button>
     <button class="nav-dropdown-toggle" id="publicationsMenuToggle" type="button" aria-controls="publicationsMenu" aria-expanded="false">Publications <span class="nav-chevron" aria-hidden="true"></span></button>
+    <a class="home-link" href="#/annual-report" data-route="annual-report">Annual Report</a>
     <div class="account-actions" id="accountActions" hidden><button class="nav-dropdown-toggle" id="accountMenuToggle" type="button" aria-controls="accountMenu" aria-expanded="false">Account <span class="nav-chevron" aria-hidden="true"></span></button></div>
     <button class="mobile-nav-toggle" id="mobileNavToggle" type="button" aria-controls="mobileMenu" aria-expanded="false"><span class="mobile-nav-icon" aria-hidden="true"><i></i><i></i><i></i></span> Menu</button>
     <span class="mobile-nav-current" id="mobileCurrentPage" aria-live="polite">Home</span>
@@ -137,6 +141,7 @@
     <div class="mobile-nav-section"><p class="mobile-nav-heading">University KPI Monitoring</p><a href="#/kpi" data-route="kpi">KPI Dashboard</a><a href="#/kpi-manage" data-route="kpi-manage">Update KPI Data</a></div>
     <div class="mobile-nav-section"><p class="mobile-nav-heading">Financial Performance</p><a href="#/finance" data-route="finance">Budget Dashboard</a><a href="#/finance-findings" data-route="finance-findings">Findings &amp; Recommendations</a><a href="#/finance-annexes" data-route="finance-annexes">Line Items &amp; Execution Report</a></div>
     <div class="mobile-nav-section"><p class="mobile-nav-heading">Publications</p><a href="#/publications" data-route="publications">Scopus-Indexed Publications</a><a href="#/publication-rankings" data-route="publication-rankings">Department Rankings</a><a href="#/faculty-rankings" data-route="faculty-rankings">Faculty Rankings</a></div>
+    <div class="mobile-nav-section"><p class="mobile-nav-heading">Annual Report</p><a href="#/annual-report" data-route="annual-report">Annual Report</a></div>
     <div class="mobile-nav-section"><p class="mobile-nav-heading">Account</p><div class="mobile-nav-account"><span id="mobileAccountName"></span><a href="#/account" data-route="account">My account</a></div><button id="mobileSignOutButton" type="button">Sign out</button></div>
   </div></nav>
   <div class="nav-menu" id="surveyMenu" role="navigation" aria-label="Client Satisfaction Survey pages" hidden>
@@ -187,6 +192,7 @@
         <a class="home-option" href="#/publications"><strong>Scopus-Indexed Publications →</strong><span>Explore publication records and department rankings.</span></a>
         <a class="home-option" href="#/kpi"><strong>University KPI Monitoring →</strong><span>Review strategic directions, annual targets, and accomplishments.</span></a>
         <a class="home-option" href="#/finance"><strong>Financial Performance →</strong><span>Track GAA budget allocation and utilization, FY 2020–2026.</span></a>
+        <a class="home-option" href="#/annual-report"><strong>Annual Report →</strong><span>A yearly summary of the University's performance (in preparation).</span></a>
       </div>
     </section>
   </template>
@@ -216,7 +222,7 @@
     const menus = [[surveyMenu, surveyMenuToggle], [licensureMenu, licensureMenuToggle], [kpiMenu, kpiMenuToggle], [financeMenu, financeMenuToggle], [publicationsMenu, publicationsMenuToggle], [accountMenu, accountMenuToggle]];
     const mobileMenu = document.getElementById('mobileMenu');
     const mobileNavToggle = document.getElementById('mobileNavToggle');
-    const mobilePageNames = { home: 'Home', dashboard: 'Survey Dashboard', evaluate: 'Evaluate an Office', quality: 'Service Quality', reports: 'Reports', admin: 'Admin', users: 'Users', licensure: 'Licensure Dashboard', 'licensure-topnotchers': 'Topnotchers', 'licensure-manage': 'Manage Data', kpi: 'University KPI Dashboard', 'kpi-manage': 'Update KPI Data', finance: 'Financial Performance', 'finance-findings': 'Budget Findings', 'finance-annexes': 'Budget Line Items', publications: 'Scopus-Indexed Publications', 'publication-rankings': 'Department Rankings', 'faculty-rankings': 'Faculty Rankings', account: 'My account' };
+    const mobilePageNames = { home: 'Home', dashboard: 'Survey Dashboard', evaluate: 'Evaluate an Office', quality: 'Service Quality', reports: 'Reports', admin: 'Admin', users: 'Users', licensure: 'Licensure Dashboard', 'licensure-topnotchers': 'Topnotchers', 'licensure-manage': 'Manage Data', kpi: 'University KPI Dashboard', 'kpi-manage': 'Update KPI Data', finance: 'Financial Performance', 'finance-findings': 'Budget Findings', 'finance-annexes': 'Budget Line Items', publications: 'Scopus-Indexed Publications', 'publication-rankings': 'Department Rankings', 'faculty-rankings': 'Faculty Rankings', 'annual-report': 'Annual Report', account: 'My account' };
     function setMobileMenuOpen(open) {
       mobileMenu.hidden = !open;
       mobileNavToggle.setAttribute('aria-expanded', String(open));
@@ -383,10 +389,10 @@
         const response = await fetch('/api.php?action=bootstrap', { cache: 'no-store' });
         if (!response.ok) throw new Error('The server could not load the survey data.');
         window.OME_BOOTSTRAP = await response.json();
-        for (const src of ['js/core.js', 'js/survey.js', 'js/dashboard.js', 'js/reports.js', 'js/admin.js', 'js/licensure.js', 'js/kpi.js', 'js/finance.js', 'js/publications.js', 'js/users.js']) {
+        for (const src of ['js/core.js', 'js/survey.js', 'js/dashboard.js', 'js/reports.js', 'js/admin.js', 'js/licensure.js', 'js/kpi.js', 'js/finance.js', 'js/publications.js', 'js/annual-report.js', 'js/users.js']) {
           try { await new Promise((resolve, reject) => {
             const script = document.createElement('script');
-            script.src = src + (src === 'js/survey.js' ? '?v=20261025-survey-v6' : src === 'js/licensure.js' ? '?v=20261104-licensure-save-position-v1' : src === 'js/kpi.js' ? '?v=20261026-kpi-v7' : src === 'js/finance.js' ? '?v=20261105-finance-v2' : src === 'js/publications.js' ? '?v=20261029-dialog-restored-v1' : '?v=20261105-weighted-mean-v2'); script.onload = resolve; script.onerror = () => reject(new Error('Could not load ' + src + '. Check that the file was uploaded to the correct folder.'));
+            script.src = src + (src === 'js/survey.js' ? '?v=20261025-survey-v6' : src === 'js/licensure.js' ? '?v=20261104-licensure-save-position-v1' : src === 'js/kpi.js' ? '?v=20261026-kpi-v7' : src === 'js/finance.js' ? '?v=20261105-finance-v2' : src === 'js/publications.js' ? '?v=20261029-dialog-restored-v1' : src === 'js/annual-report.js' ? '?v=20261105-annual-report-v1' : '?v=20261105-weighted-mean-v2'); script.onload = resolve; script.onerror = () => reject(new Error('Could not load ' + src + '. Check that the file was uploaded to the correct folder.'));
             document.body.append(script);
           }); } catch (error) {
             if (src !== 'js/publications.js') throw error;
