@@ -1,6 +1,6 @@
 .pub-filter, .pub-method { padding: 20px 24px; margin-bottom: 18px; }
 .pub-filter label { display: block; color: var(--brand-dark); font-weight: 700; margin-bottom: 6px; }
-.pub-filter input { width: min(100%, 650px); min-height: 46px; padding: 10px 12px; border: 1px solid #cfc8d2; border-radius: 8px; font: inherit; }
+.pub-filter input, .pub-filter select { width: min(100%, 650px); min-height: 46px; padding: 10px 12px; border: 1px solid #cfc8d2; border-radius: 8px; background: #fff; color: inherit; font: inherit; }
 .pub-year-filter { margin-bottom: 18px; padding: 16px 24px; }
 .pub-year-filter label { display: block; margin-bottom: 6px; color: var(--brand-dark); font-weight: 700; }
 .pub-year-filter select { width: min(100%, 240px); min-height: 46px; padding: 10px 12px; border: 1px solid #cfc8d2; border-radius: 8px; background: #fff; font: inherit; }
@@ -30,7 +30,7 @@
 .pub-form-grid label:first-child, .pub-form-grid label:nth-child(3) { grid-column: 1 / -1; }
 .pub-form-grid textarea, .pub-form-grid input { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px solid #cfc8d2; border-radius: 8px; font: inherit; }
 .pub-form-grid textarea { resize: none; }
-.pub-filter input:focus-visible, .pub-form-grid textarea:focus-visible, .pub-form-grid input:focus-visible, .pub-expand:focus-visible { outline: 3px solid var(--gold); outline-offset: 1px; }
+.pub-filter input:focus-visible, .pub-filter select:focus-visible, .pub-form-grid textarea:focus-visible, .pub-form-grid input:focus-visible, .pub-expand:focus-visible { outline: 3px solid var(--gold); outline-offset: 1px; }
 .pub-form-error { color: var(--bad); }.pub-dialog-actions { justify-content: flex-end; }
 .pub-change-preview { margin: 0 24px; color: var(--brand-dark); font-weight: 600; }
 .pub-author-list, .pub-author-add { margin: 16px 24px; }
@@ -61,6 +61,9 @@
 .pub-table { width: 100%; border-collapse: collapse; table-layout: fixed; line-height: 1.4; }
 .pub-records-table { min-width: 1650px; }
 .pub-rankings-table { min-width: 600px; }
+.pub-rankings-table tbody tr { cursor: pointer; }
+.pub-rankings-table tbody tr:hover > * { background: #f7eaf3; }
+.pub-rankings-table tbody a:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
 .pub-faculty-table { min-width: 850px; }
 .pub-table th, .pub-table td { padding: 11px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; overflow-wrap: break-word; }
 .pub-table thead th { position: relative; z-index: 4; background: var(--brand-soft); color: var(--brand-dark); font: 700 .8rem var(--font-head); }
@@ -98,7 +101,7 @@
 .pub-filter-details[open] summary::before { content: '−'; }
 .pub-filter-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 16px; padding: 4px 0 12px; }
 .pub-filter-grid label { margin: 0; font-size: .86rem; }
-.pub-filter-grid input { display: block; margin-top: 5px; width: 100%; font-weight: 400; }
+.pub-filter-grid input, .pub-filter-grid select { display: block; margin-top: 5px; width: 100%; font-weight: 400; }
 .pub-filter-footer { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin-top: 8px; }
 .pub-search-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .pub-search-row input { flex: 1 1 260px; }

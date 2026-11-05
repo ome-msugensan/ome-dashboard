@@ -1,0 +1,9 @@
+CREATE TABLE IF NOT EXISTS annual_reports (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(255) NOT NULL,
+  report_year SMALLINT UNSIGNED DEFAULT NULL,
+  file_type ENUM('pdf','epub') NOT NULL,
+  drive_file_id VARCHAR(200) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX annual_reports_year (report_year)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

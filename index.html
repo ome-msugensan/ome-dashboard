@@ -8,12 +8,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="icon" type="image/png" href="img/favicon.png">
-  <link rel="stylesheet" href="css/styles.css?v=20261103-licensure-scales-v1">
+  <link rel="stylesheet" href="css/styles.css?v=20261105-page-footer-v2">
   <link rel="stylesheet" href="css/survey.css?v=20261025-survey-v6">
   <link rel="stylesheet" href="css/kpi.css?v=20261026-kpi-v7">
   <link rel="stylesheet" href="css/finance.css?v=20261105-finance-v2">
-  <link rel="stylesheet" href="css/publications.css?v=20261029-dialog-restored-v1">
-  <link rel="stylesheet" href="css/annual-report.css?v=20261105-annual-reports-v2">
+  <link rel="stylesheet" href="css/publications.css?v=20261105-faculty-affiliations-v1">
+  <link rel="stylesheet" href="css/annual-report.css?v=20261105-featured-design-v2">
+  <link rel="stylesheet" href="css/annual-reader.css?v=20261105-drive-manager-v1">
   <style>
     .account-actions { margin-left: auto; display: flex; align-items: stretch; min-width: 0; }
     .auth-wrap { display: grid; place-items: center; min-height: min(650px, 75vh); padding: 36px 16px; }
@@ -192,7 +193,7 @@
         <a class="home-option" href="#/publications"><strong>Scopus-Indexed Publications →</strong><span>Explore publication records and department rankings.</span></a>
         <a class="home-option" href="#/kpi"><strong>University KPI Monitoring →</strong><span>Review strategic directions, annual targets, and accomplishments.</span></a>
         <a class="home-option" href="#/finance"><strong>Financial Performance →</strong><span>Track GAA budget allocation and utilization, FY 2020–2026.</span></a>
-        <a class="home-option" href="#/annual-report"><strong>Annual Reports →</strong><span>A yearly summary of the University's performance (in preparation).</span></a>
+        <a class="home-option" href="#/annual-report"><strong>Annual Reports →</strong><span>Browse and read the University's annual reports.</span></a>
       </div>
     </section>
   </template>
@@ -366,9 +367,10 @@
         OME.clearCharts();
         fn(view);
       } else if (loadError) {
-        view.innerHTML = '<div class="card" style="margin:40px auto;max-width:600px"><h2>Survey data is unavailable</h2><p>Please try again later, or return to the <a href="#/home">home page</a>.</p></div>';
+        view.innerHTML = '<div class="card" style="margin:40px auto;max-width:600px"><h2>Page unavailable</h2><p>Please try again later, or return to the <a href="#/home">home page</a>.</p></div>';
       } else {
-        view.innerHTML = '<div class="card" style="margin:40px auto;max-width:600px" role="status">Loading survey data…</div>';
+        view.innerHTML = '<div class="card" style="margin:40px auto;max-width:600px" role="status"></div>';
+        view.querySelector('[role="status"]').textContent = `Preparing ${mobilePageNames[name] || 'page'}…`;
       }
       window.scrollTo(0, 0);
     }
@@ -389,10 +391,10 @@
         const response = await fetch('/api.php?action=bootstrap', { cache: 'no-store' });
         if (!response.ok) throw new Error('The server could not load the survey data.');
         window.OME_BOOTSTRAP = await response.json();
-        for (const src of ['js/core.js', 'js/survey.js', 'js/dashboard.js', 'js/reports.js', 'js/admin.js', 'js/licensure.js', 'js/kpi.js', 'js/finance.js', 'js/publications.js', 'js/annual-report.js', 'js/users.js']) {
+        for (const src of ['js/core.js', 'js/survey.js', 'js/dashboard.js', 'js/reports.js', 'js/admin.js', 'js/licensure.js', 'js/kpi.js', 'js/finance.js', 'js/publications.js', 'js/annual-reader.js', 'js/annual-report.js', 'js/users.js']) {
           try { await new Promise((resolve, reject) => {
             const script = document.createElement('script');
-            script.src = src + (src === 'js/survey.js' ? '?v=20261025-survey-v6' : src === 'js/licensure.js' ? '?v=20261104-licensure-save-position-v1' : src === 'js/kpi.js' ? '?v=20261026-kpi-v7' : src === 'js/finance.js' ? '?v=20261105-finance-v2' : src === 'js/publications.js' ? '?v=20261029-dialog-restored-v1' : src === 'js/annual-report.js' ? '?v=20261105-annual-reports-v2' : '?v=20261105-weighted-mean-v2'); script.onload = resolve; script.onerror = () => reject(new Error('Could not load ' + src + '. Check that the file was uploaded to the correct folder.'));
+            script.src = src + (src === 'js/survey.js' ? '?v=20261025-survey-v6' : src === 'js/licensure.js' ? '?v=20261105-licensure-topnotchers-v1' : src === 'js/kpi.js' ? '?v=20261026-kpi-v7' : src === 'js/finance.js' ? '?v=20261105-finance-v2' : src === 'js/publications.js' ? '?v=20261105-laboratory-affiliations-v1' : src === 'js/annual-report.js' ? '?v=20261105-featured-latest-v1' : '?v=20261105-weighted-mean-v2'); script.onload = resolve; script.onerror = () => reject(new Error('Could not load ' + src + '. Check that the file was uploaded to the correct folder.'));
             document.body.append(script);
           }); } catch (error) {
             if (src !== 'js/publications.js') throw error;

@@ -97,11 +97,11 @@
         <div class="lic-filter-actions"><button class="btn subtle" id="lic-clear" type="button">Clear dates</button>
         <button class="btn ghost" id="lic-export" type="button">Export data</button></div>
       </div><p class="lic-filter-error" id="lic-date-error" role="status" ${state.dateWarning ? '' : 'hidden'}>${esc(state.dateWarning)}</p></section>
-      <section class="card lic-panel"><div class="lic-panel-head"><div><h3>Performance trend</h3><p class="muted small">${esc(current?.exam_title || 'Select a program')} · oldest to latest</p></div><label>View by <select id="lic-metric"><option value="rate" ${state.metric === 'rate' ? 'selected' : ''}>Passing rate (%)</option><option value="passers" ${state.metric === 'passers' ? 'selected' : ''}>Passers</option><option value="takers" ${state.metric === 'takers' ? 'selected' : ''}>Takers</option></select></label></div>
+      <section class="card lic-panel"><div class="lic-panel-head"><div><h3>Performance trend</h3><p class="muted small">${esc(current?.exam_title || 'Select a program')} · oldest to latest</p><p class="muted small">Larger points indicate topnotchers. Select a point to view them.</p></div><label>View by <select id="lic-metric"><option value="rate" ${state.metric === 'rate' ? 'selected' : ''}>Passing rate (%)</option><option value="passers" ${state.metric === 'passers' ? 'selected' : ''}>Passers</option><option value="takers" ${state.metric === 'takers' ? 'selected' : ''}>Takers</option></select></label></div>
         ${periods.length ? (state.metric === 'rate' ? `<div class="lic-chart-pair">${state.taker !== 'Overall' ? '<section class="lic-trend-group"><h4>First-time passing rate</h4><div class="lic-chart"><canvas id="lic-chart-first" role="img" aria-label="MSU-GSC and national first-time passing rates by exam period"></canvas></div></section>' : ''}${state.taker !== 'First' ? '<section class="lic-trend-group"><h4>Overall passing rate</h4><div class="lic-chart"><canvas id="lic-chart-overall" role="img" aria-label="MSU-GSC and national overall passing rates by exam period"></canvas></div></section>' : ''}</div>` : `<div class="lic-chart-pair"><p class="lic-chart-scale-note">Each chart uses its own vertical scale. Counts are shown for the selected taker type.</p><section class="lic-trend-group"><h4>MSU-GSC ${state.metric}</h4><div class="lic-chart"><canvas id="lic-chart-msu" role="img" aria-label="MSU-GSC ${state.metric} by exam period"></canvas></div></section><section class="lic-trend-group"><h4>National ${state.metric}</h4><div class="lic-chart"><canvas id="lic-chart-national" role="img" aria-label="National ${state.metric} by exam period"></canvas></div></section></div>`) : '<p class="lic-empty">No exam periods match these filters.</p>'}
       </section>
       <section class="card lic-panel lic-detail-panel"><div class="lic-panel-head"><div><span class="lic-eyebrow">Examination records</span><h3>Detailed examination results</h3><p class="muted small">${esc(current?.program_name || 'Select a program')} · First-time and overall passing rates</p></div><span class="lic-count-pill">${periods.length} period${periods.length === 1 ? '' : 's'}</span></div>
-        ${table(['Exam period', 'MSU first-time', 'MSU overall', 'National first-time', 'National overall'], [...periods].reverse().map(p => `<tr><th scope="row">${esc(p.exam_period_label)}</th><td class="lic-rate">${rate(result(p.period_id, 'MSU', 'First'))}</td><td class="lic-rate">${rate(result(p.period_id, 'MSU', 'Overall'))}</td><td class="lic-rate">${rate(result(p.period_id, 'National', 'First'))}</td><td class="lic-rate">${rate(result(p.period_id, 'National', 'Overall'))}</td></tr>`).join(''), 'No exam periods match these filters.', 'Detailed examination results')}
+        ${table(['Exam period', 'MSU first-time', 'MSU overall', 'National first-time', 'National overall', 'Topnotchers'], [...periods].reverse().map(p => `<tr><th scope="row">${esc(p.exam_period_label)}</th><td class="lic-rate">${rate(result(p.period_id, 'MSU', 'First'))}</td><td class="lic-rate">${rate(result(p.period_id, 'MSU', 'Overall'))}</td><td class="lic-rate">${rate(result(p.period_id, 'National', 'First'))}</td><td class="lic-rate">${rate(result(p.period_id, 'National', 'Overall'))}</td><td>${topnotchers(p.period_id).length ? `<button class="btn ghost lic-view-period-top" type="button" data-id="${num(p.period_id)}" aria-label="View topnotchers for ${esc(p.exam_period_label)}">View (${topnotchers(p.period_id).length})</button>` : '—'}</td></tr>`).join(''), 'No exam periods match these filters.', 'Detailed examination results')}
       </section>`;
     root.querySelector('#lic-program').onchange = event => { state.program = event.target.value; renderAndFocus(root, renderDashboard, '#lic-program'); };
     root.querySelector('#lic-from').onchange = event => { state.from = event.target.value; state.dateWarning = ''; if (state.from && state.to && state.from > state.to) { state.to = ''; state.dateWarning = 'The end month was cleared because it was before the start month.'; } renderAndFocus(root, renderDashboard, '#lic-from'); };
@@ -110,6 +110,7 @@
     root.querySelector('#lic-metric').onchange = event => { state.metric = event.target.value; renderAndFocus(root, renderDashboard, '#lic-metric'); };
     root.querySelector('#lic-clear').onclick = () => { state.from = ''; state.to = ''; state.dateWarning = ''; renderAndFocus(root, renderDashboard, '#lic-clear'); };
     root.querySelector('#lic-export').onclick = () => exportDashboard(periods, current);
+    root.querySelectorAll('.lic-view-period-top').forEach(button => button.onclick = () => showPeriodTopnotchers(period(button.dataset.id)));
     drawChart(root, periods);
   }
   function drawChart(root, periods) {
@@ -127,13 +128,14 @@
     const values = (group, taker) => periods.map(p => {
       const row = result(p.period_id, group, taker);
       const raw = row?.[state.metric];
+      if (row?.takers === null || row?.takers === undefined || row?.takers === '' || !Number.isFinite(Number(row.takers)) || Number(row.takers) <= 0) return null;
       return raw === null || raw === undefined || raw === '' || !Number.isFinite(Number(raw)) ? null : Number(raw);
     });
     const types = state.taker === 'Both' ? ['First', 'Overall'] : [state.taker];
     const dataset = (group, taker) => {
       const national = group === 'National', overall = taker === 'Overall';
       const color = national ? (overall ? '#9a6400' : '#c17d00') : (overall ? '#ab4a8f' : '#720455');
-      return { label: `${national ? 'National' : 'MSU-GSC'} · ${overall ? 'Overall' : 'First-time'}`, data: values(group, taker), borderColor: color, backgroundColor: color, borderDash: overall ? [6, 4] : [], pointStyle: overall ? 'triangle' : 'circle', tension: .25, pointRadius: 4 };
+      return { label: `${national ? 'National' : 'MSU-GSC'} · ${overall ? 'Overall' : 'First-time'}`, data: values(group, taker), borderColor: color, backgroundColor: color, borderDash: overall ? [6, 4] : [], pointStyle: overall ? 'triangle' : 'circle', tension: .25, spanGaps: true, pointRadius: periods.map(p => topnotchers(p.period_id).length ? 7 : 4), pointHitRadius: 8 };
     };
     const isRate = state.metric === 'rate';
     const makeChart = (canvas, groups, chartTypes = types) => {
@@ -143,12 +145,25 @@
       }
       charts.push(new Chart(canvas, { type: 'line', data: { labels: periods.map(p => p.exam_period_label), datasets: series }, options: {
         responsive: true, maintainAspectRatio: false, interaction: { intersect: false, mode: 'index' },
+        onClick: (event, _active, chart) => {
+          const point = chart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, false)[0];
+          if (point && topnotchers(periods[point.index].period_id).length) showPeriodTopnotchers(periods[point.index]);
+        },
         plugins: { legend: { display: true, labels: { usePointStyle: true } }, tooltip: { callbacks: { label: context => `${context.dataset.label}: ${context.parsed.y}${isRate ? '%' : ''}` } } },
         scales: { y: { beginAtZero: true, max: isRate ? 100 : undefined, ticks: isRate ? {} : { precision: 0 }, afterFit: scale => { scale.width = 70; }, ...(!isRate ? { title: { display: true, text: state.metric === 'passers' ? 'Number of passers' : 'Number of takers' } } : {}) } }
       } }));
     };
     if (isRate) { if (state.taker !== 'Overall') makeChart(root.querySelector('#lic-chart-first'), ['MSU', 'National'], ['First']); if (state.taker !== 'First') makeChart(root.querySelector('#lic-chart-overall'), ['MSU', 'National'], ['Overall']); }
     else { makeChart(root.querySelector('#lic-chart-msu'), ['MSU']); makeChart(root.querySelector('#lic-chart-national'), ['National']); }
+  }
+  function showPeriodTopnotchers(examPeriod) {
+    if (!examPeriod) return;
+    const list = [...topnotchers(examPeriod.period_id)].sort((a, b) => num(a.rank_position) - num(b.rank_position) || a.full_name.localeCompare(b.full_name));
+    if (!list.length) return;
+    const dialog = openModal('Topnotchers', `<p class="muted">${esc(programName(examPeriod.program_id))} · ${esc(examPeriod.exam_period_label)}</p>${table(['Rank', 'Full name', 'Rating'], list.map(t => `<tr><td>#${num(t.rank_position)}</td><th scope="row">${esc(t.full_name)}</th><td>${t.rating === null || t.rating === undefined || t.rating === '' ? '—' : num(t.rating).toFixed(2) + '%'}</td></tr>`).join(''), 'No topnotchers recorded.', 'Topnotchers for this examination period')}`, async () => {});
+    dialog.classList.add('lic-topnotcher-dialog');
+    dialog.querySelector('.lic-save').remove();
+    dialog.querySelector('.lic-cancel').textContent = 'Close';
   }
   function exportDashboard(periods, current) {
     const safe = value => /^[=+\-@]/.test(String(value)) ? "'" + value : value;

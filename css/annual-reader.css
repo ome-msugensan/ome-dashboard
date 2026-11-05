@@ -1,0 +1,16 @@
+/* Full-screen, in-page document reader. */
+.ar-reader { width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: #29262c; color: #fff; }
+.ar-reader::backdrop { background: rgba(20, 10, 20, .8); }
+.ar-reader-layout { height: 100%; display: grid; grid-template-rows: auto minmax(0,1fr) auto; }
+.ar-reader-head { min-height: 54px; padding: 7px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #201820; }
+.ar-reader-head strong { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.ar-reader-auth { color:#fff; font-size:.85rem; white-space:nowrap; margin-left:auto; }
+.ar-reader-close, .ar-reader-tools button, .ar-reader-tools a { min-width: 44px; height: 44px; border: 0; border-radius: 6px; background: transparent; color: #fff; font: 600 1.5rem/1 sans-serif; display: inline-grid; place-items: center; text-decoration: none; cursor: pointer; }
+.ar-reader-close:hover, .ar-reader-tools :is(button,a):hover { background: #574753; }
+.ar-reader :is(button,a):focus-visible { outline: 3px solid #ffab00; outline-offset: -3px; }
+.ar-reader-stage { min-height: 0; display: grid; place-items: center; overflow: auto; overscroll-behavior: contain; padding: 12px; }
+.ar-reader-stage canvas { display: block; background: #fff; box-shadow: 0 3px 16px #0008; }
+.ar-reader-stage [hidden] { display: none; }
+.ar-reader-epub { background: #fff; color: #222; width: min(100%, 900px); height: 100%; box-shadow: 0 3px 16px #0008; }
+.ar-reader-tools { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; padding: 7px 12px; background: #201820; }
+.ar-reader-page { min-width: 82px; text-align: center; font-size: .85rem; }

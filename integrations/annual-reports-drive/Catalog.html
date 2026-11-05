@@ -1,0 +1,7 @@
+<!doctype html><html><head><base target="_top"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><p id="status">Connecting to the annual reports folder…</p><script>
+const origin=<?!= JSON.stringify(omeOrigin) ?>, token=<?!= JSON.stringify(messageToken) ?>;
+function tell(type,payload){if(token)window.top.postMessage({channel:'ome-annual-catalog',token,type,...payload},origin)}
+let busy=false;
+function refresh(){if(busy)return;busy=true;google.script.run.withSuccessHandler(items=>{busy=false;document.getElementById('status').textContent='Connected. You may return to OME.';tell('catalog',{items})}).withFailureHandler(error=>{busy=false;const message=error.message||'Could not access the Drive folder.';document.getElementById('status').textContent=message;tell('error',{message})}).listReports()}
+refresh();setInterval(refresh,60000);
+</script></body></html>

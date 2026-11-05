@@ -4,12 +4,66 @@
   const fields = [
     ['publication_title', 'Publication Title', 1000], ['publication_date', 'Date of Publication', 100],
     ['publication_venue', 'Book Chapter/Journal/Conference Proceedings Published', 1000], ['author_name', 'Author', 255],
-    ['school', 'School', 500], ['college', 'College/Domain', 500], ['department', 'Department', 500]
+    ['school', 'School', 500], ['college', 'College/Domain', 500], ['department', 'Department/Laboratory', 500]
   ];
   let data = null, token = 0;
   let scrollCleanup = () => {};
   const pageSize = 10;
-  const filterFields = fields.slice(1);
+  const filterFields = fields.filter(([key]) => ['publication_date', 'college', 'department'].includes(key));
+  const normalized = value => String(value || '').trim().toLowerCase();
+  // Faculty sheet, Performance Summary Report, second semester 2025–2026.
+  const facultyDepartments = {
+    'College of Agriculture': ['Agricultural Business Management', 'Agricultural and Biosystems Engineering', 'Animal Science', 'Plant Science'],
+    'College of Business Administration and Accountancy': ['Accountancy', 'Economics, Management and Marketing'],
+    'College of Education': ['Elementary Education', 'Physical Education', 'Secondary Education'],
+    'College of Engineering': ['Civil Engineering', 'Electrical Engineering', 'Electronics and Communications Engineering', 'Engineering Technology', 'Mechanical Engineering'],
+    'College of Fisheries and Aquatic Sciences': ['Aquaculture', 'Fish Processing and Marine Biology'],
+    'College of Health Sciences': ['Nursing'],
+    'College of Medicine': ['Basic Sciences', 'Clinical Sciences', 'Community and Allied Services'],
+    'College of Natural Sciences and Mathematics': ['Biological Sciences and Environmental Studies', 'Chemistry', 'Information Technology and Physics', 'Mathematics'],
+    'College of Social Sciences and Humanities': ['English', 'Filipino', 'History', 'Political Science', 'Psychology', 'Sociology'],
+    'Institute of Islamic, Arabic, and International Studies': ['Islamic Studies'],
+    'Office of the Vice Chancellor for Research, Extension, and Innovation': ['Histopathology Laboratory']
+  };
+  const collegeAliases = {
+    'coed': 'College of Education', 'cnsm': 'College of Natural Sciences and Mathematics',
+    'cssh': 'College of Social Sciences and Humanities',
+    'ovcrei': 'Office of the Vice Chancellor for Research, Extension, and Innovation'
+  };
+  function nameKey(value) {
+    return normalized(value).replace(/&/g, ' and ').replace(/[.,]/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+  function canonicalCollege(value) {
+    const key = nameKey(value), alias = collegeAliases[key];
+    return alias || Object.keys(facultyDepartments).find(name => nameKey(name) === key) || String(value || '').trim();
+  }
+  function departmentKey(value) {
+    return nameKey(value).replace(/\bdept\b/g, 'department').replace(/\binfo\b/g, 'information').replace(/\btech\b/g, 'technology').replace(/\bcomm\b/g, 'communications').replace(/^department of /, '').replace(/ department$/, '').replace(/\s+/g, ' ').trim();
+  }
+  function canonicalDepartment(college, value) {
+    const raw = String(value || '').trim();
+    let key = departmentKey(raw);
+    if (canonicalCollege(college) === 'College of Education') key = key.replace(/^bachelor of /, '');
+    if (canonicalCollege(college) === 'College of Natural Sciences and Mathematics' && key === 'science') key = 'biological sciences and environmental studies';
+    if (canonicalCollege(college) === 'College of Agriculture' && key === 'agricultural engineering') key = 'agricultural and biosystems engineering';
+    if (canonicalCollege(college) === 'Office of the Vice Chancellor for Research, Extension, and Innovation' && key === 'histopathology laborartory') key = 'histopathology laboratory';
+    return (facultyDepartments[canonicalCollege(college)] || []).find(name => departmentKey(name) === key) || raw;
+  }
+  function uniqueOptions(values) {
+    const seen = new Map();
+    values.forEach(value => { const name = String(value || '').trim(); if (name && !seen.has(normalized(name))) seen.set(normalized(name), name); });
+    return [...seen.values()].sort((a, b) => a.localeCompare(b));
+  }
+  function collegeChoices() {
+    return uniqueOptions(Object.keys(facultyDepartments));
+  }
+  function departmentChoices(college) {
+    if (!college) return [];
+    return uniqueOptions(facultyDepartments[canonicalCollege(college)] || []);
+  }
+  function selectOptions(values, placeholder) {
+    return `<option value="">${esc(placeholder)}</option>${values.map(value => `<option value="${esc(value)}">${esc(value)}</option>`).join('')}`;
+  }
   function pagination(page, total) {
     const pages = Math.max(1, Math.ceil(total / pageSize));
     return `<nav class="pub-pagination" aria-label="Results pages"><button class="btn btn-outline" type="button" data-page="prev" aria-label="Previous page" ${page <= 1 ? 'disabled' : ''}>&lt;</button><span>Page ${page} of ${pages}</span><button class="btn btn-outline" type="button" data-page="next" aria-label="Next page" ${page >= pages ? 'disabled' : ''}>&gt;</button></nav>`;
@@ -111,11 +165,40 @@
   }
   function drawList(root) {
     root.innerHTML = header('Scopus-Indexed Publications', 'Explore publication records and their authors and affiliations.', data.canEdit ? '<button class="btn" id="pub-add" type="button">Add record</button>' : '') + `
-      <div class="card pub-filter"><form id="pub-search-form" role="search"><label for="pub-search">Search all fields</label><div class="pub-search-row"><input id="pub-search" type="search" placeholder="Search publication records" autocomplete="off"><button class="btn" type="submit">Search</button><button id="pub-clear-search" class="btn btn-outline" type="button" hidden>Clear search</button></div></form><details class="pub-filter-details"><summary>Filter by field</summary><form id="pub-filter-form"><div class="pub-filter-grid">${filterFields.map(([key,label]) => `<label for="filter-${key}">${esc(label)}<input id="filter-${key}" data-filter="${key}" type="search" placeholder="Filter ${esc(label)}" autocomplete="off"></label>`).join('')}</div><div class="pub-filter-footer"><button id="pub-apply" class="btn" type="submit" disabled>Apply filters</button><button id="pub-clear" class="btn btn-outline" type="button" disabled>Clear filters</button></div></form></details><p id="pub-count" class="muted small" role="status" aria-live="polite"></p></div>
+      <div class="card pub-filter"><form id="pub-search-form" role="search"><label for="pub-search">Search all fields</label><div class="pub-search-row"><input id="pub-search" type="search" placeholder="Search publication records" autocomplete="off"><button class="btn" type="submit">Search</button><button id="pub-clear-search" class="btn btn-outline" type="button" hidden>Clear search</button></div></form><details class="pub-filter-details"><summary>Filter by field</summary><form id="pub-filter-form"><div class="pub-filter-grid"><label for="filter-publication_date">Date of Publication<input id="filter-publication_date" data-filter="publication_date" type="search" placeholder="Filter Date of Publication" autocomplete="off"></label><label for="filter-college">College/Domain<select id="filter-college" data-filter="college">${selectOptions(collegeChoices(), 'All colleges/domains')}</select></label><label for="filter-department">Department/Laboratory<select id="filter-department" data-filter="department" disabled>${selectOptions([], 'Select a college/domain first')}</select></label></div><div class="pub-filter-footer"><button id="pub-apply" class="btn" type="submit" disabled>Apply filters</button><button id="pub-clear" class="btn btn-outline" type="button" disabled>Clear filters</button></div></form></details><p id="pub-count" class="muted small" role="status" aria-live="polite"></p></div>
       <div id="pub-list" class="pub-list"></div><dialog id="pub-dialog" class="kpi-dialog"></dialog>`;
     const list = root.querySelector('#pub-list'), count = root.querySelector('#pub-count');
     let page = 1;
     let appliedQuery = '', appliedFilters = filterFields.map(([key]) => [key, '']);
+    let rankingScope = false, rankingAffiliation = null;
+    const collegeSelect = root.querySelector('#filter-college'), departmentSelect = root.querySelector('#filter-department');
+    function updateDepartments(selected = '') {
+      departmentSelect.innerHTML = selectOptions(departmentChoices(collegeSelect.value), collegeSelect.value ? 'All departments/laboratories' : 'Select a college/domain first');
+      departmentSelect.disabled = !collegeSelect.value;
+      const option = [...departmentSelect.options].find(item => normalized(item.value) === normalized(selected));
+      departmentSelect.value = option?.value || '';
+    }
+    const params = new URLSearchParams(location.hash.split('?')[1] || '');
+    function clearRankingLink() {
+      if (new URLSearchParams(location.hash.split('?')[1] || '').get('scope') === 'gsc') {
+        try { history.replaceState(history.state, '', '#/publications'); } catch (_) { /* Keep filtering usable if the browser restricts history changes. */ }
+      }
+    }
+    if (params.get('scope') === 'gsc' && params.get('college') && params.get('department')) {
+      const college = [...collegeSelect.options].find(item => normalized(item.value) === normalized(canonicalCollege(params.get('college'))));
+      const matchingRanking = data.rows.some(row => isGsc(row.school) && normalized(row.college) === normalized(params.get('college')) && normalized(row.department) === normalized(params.get('department')));
+      if (matchingRanking) {
+        if (college) {
+          collegeSelect.value = college.value;
+          updateDepartments(canonicalDepartment(params.get('college'), params.get('department')));
+        }
+        root.querySelector('#filter-publication_date').value = params.get('year') || '';
+        appliedFilters = [['publication_date', normalized(params.get('year'))], ['college', normalized(params.get('college'))], ['department', normalized(params.get('department'))]];
+        rankingScope = true;
+        rankingAffiliation = { college: normalized(params.get('college')), department: normalized(params.get('department')) };
+        root.querySelector('.pub-filter-details').open = true;
+      }
+    }
     const expanded = new Map();
     function updateClearButton() {
       const hasDraft = [...root.querySelectorAll('[data-filter]')].some(input => input.value.trim());
@@ -128,7 +211,19 @@
       const query = appliedQuery, filters = appliedFilters;
       updateClearButton();
       const groups = publicationGroups(data.rows);
-      const matched = groups.filter(group => group.some(r => fields.some(([key]) => String(r[key] || '').toLowerCase().includes(query)) && filters.every(([key, term]) => String(r[key] || '').toLowerCase().includes(term))));
+      const matched = groups.filter(group => group.some(r => (!rankingScope || isGsc(r.school)) && fields.some(([key]) => String(r[key] || '').toLowerCase().includes(query)) && filters.every(([key, term]) => {
+        if (!term) return true;
+        if (key === 'college') return rankingAffiliation ? normalized(r.college) === rankingAffiliation.college : normalized(canonicalCollege(r.college)) === term;
+        if (key === 'department') return rankingAffiliation ? normalized(r.department) === rankingAffiliation.department : normalized(canonicalDepartment(r.college, r.department)) === term;
+        if (rankingScope && /^\d{4}$/.test(term)) return publicationYear(r.publication_date) === term;
+        return normalized(r[key]).includes(term);
+      })));
+      let scopeNote = root.querySelector('#pub-ranking-scope');
+      if (rankingScope && !scopeNote) {
+        scopeNote = document.createElement('p'); scopeNote.id = 'pub-ranking-scope'; scopeNote.className = 'muted small';
+        scopeNote.textContent = `Showing MSU–General Santos records from Department Rankings: ${params.get('college')} · ${params.get('department')}.`;
+        count.before(scopeNote);
+      } else if (!rankingScope && scopeNote) scopeNote.remove();
       page = Math.min(page, Math.max(1, Math.ceil(matched.length / pageSize)));
       const start = (page - 1) * pageSize, rows = matched.slice(start, start + pageSize);
       count.textContent = matched.length ? `Showing ${start + 1}–${start + rows.length} of ${matched.length} matching publications (${groups.length} total). Use + to show additional authors.` : `No matching publications (${groups.length} total)`;
@@ -138,10 +233,12 @@
       if (viewport) viewport.scrollLeft = scrollLeft;
     }
     root.querySelectorAll('[data-filter]').forEach(input => input.addEventListener('input', updateClearButton));
-    root.querySelector('#pub-search-form').addEventListener('submit', event => { event.preventDefault(); appliedQuery = root.querySelector('#pub-search').value.trim().toLowerCase(); appliedFilters = filterFields.map(([key]) => [key, '']); root.querySelectorAll('[data-filter]').forEach(input => { input.value = ''; }); page = 1; expanded.clear(); filter(); });
+    collegeSelect.addEventListener('change', () => { updateDepartments(); updateClearButton(); });
+    departmentSelect.addEventListener('change', updateClearButton);
+    root.querySelector('#pub-search-form').addEventListener('submit', event => { event.preventDefault(); appliedQuery = root.querySelector('#pub-search').value.trim().toLowerCase(); appliedFilters = filterFields.map(([key]) => [key, '']); root.querySelectorAll('[data-filter]').forEach(input => { input.value = ''; }); updateDepartments(); rankingScope = false; rankingAffiliation = null; clearRankingLink(); page = 1; expanded.clear(); filter(); });
     root.querySelector('#pub-clear-search').addEventListener('click', () => { root.querySelector('#pub-search').value = ''; appliedQuery = ''; page = 1; expanded.clear(); filter(); });
-    root.querySelector('#pub-filter-form').addEventListener('submit', event => { event.preventDefault(); appliedFilters = [...root.querySelectorAll('[data-filter]')].map(input => [input.dataset.filter, input.value.trim().toLowerCase()]); appliedQuery = ''; root.querySelector('#pub-search').value = ''; page = 1; expanded.clear(); filter(); });
-    root.querySelector('#pub-clear').addEventListener('click', () => { root.querySelectorAll('[data-filter]').forEach(input => { input.value = ''; }); appliedFilters = filterFields.map(([key]) => [key, '']); page = 1; expanded.clear(); filter(); });
+    root.querySelector('#pub-filter-form').addEventListener('submit', event => { event.preventDefault(); appliedFilters = [...root.querySelectorAll('[data-filter]')].map(input => [input.dataset.filter, input.value.trim().toLowerCase()]); rankingAffiliation = null; appliedQuery = ''; root.querySelector('#pub-search').value = ''; page = 1; expanded.clear(); filter(); });
+    root.querySelector('#pub-clear').addEventListener('click', () => { root.querySelectorAll('[data-filter]').forEach(input => { input.value = ''; }); appliedFilters = filterFields.map(([key]) => [key, '']); updateDepartments(); rankingScope = false; rankingAffiliation = null; clearRankingLink(); page = 1; expanded.clear(); filter(); });
     list.addEventListener('click', event => { const button = event.target.closest('[data-page]'); if (!button || button.disabled) return; page += button.dataset.page === 'next' ? 1 : -1; filter(); });
     list.addEventListener('click', event => { const button = event.target.closest('[data-expand]'); if (!button) return; const id = Number(button.dataset.expand); expanded.set(id, button.getAttribute('aria-expanded') !== 'true'); filter(); list.querySelector(`[data-expand="${id}"]`)?.focus(); });
     filter();
@@ -230,16 +327,28 @@
     };
     dialog.showModal();
   }
+  function rankingLink(row, year) {
+    const params = new URLSearchParams({ scope: 'gsc', college: row.college, department: row.department });
+    if (year) params.set('year', year);
+    return '#/publications?' + params.toString();
+  }
   function drawRankings(root, year = '') {
     const years = [...new Set(data.rows.map(r => publicationYear(r.publication_date)).filter(Boolean))].sort((a, b) => Number(b) - Number(a));
     const list = rankings(year ? data.rows.filter(r => publicationYear(r.publication_date) === year) : data.rows);
-    root.innerHTML = header('Department Rankings', 'Compare MSU-GSC departments by their Scopus-indexed publications.', '<a class="btn" href="#/publications">View publications</a>') + `<form class="card pub-year-filter" id="pub-year-form"><label for="pub-ranking-year">Publication year</label><select id="pub-ranking-year"><option value="">All years</option>${years.map(y => `<option value="${y}" ${year === y ? 'selected' : ''}>${y}</option>`).join('')}</select><button class="btn" type="submit">Apply year</button></form><div id="pub-year-results" aria-live="polite">${list.length ? `<div class="card pub-table-scroll" role="region" aria-label="Department rankings table, scroll horizontally to see all columns" tabindex="0"><table class="pub-table pub-rankings-table"><caption class="pub-visually-hidden">Department rankings by number of publications${year ? ' in ' + year : ''}</caption><thead><tr><th scope="col">College</th><th scope="col">Department</th><th scope="col">Number of Publications</th><th scope="col">Ranking</th></tr></thead><tbody>${list.map(r => `<tr><td>${esc(r.college)}</td><th scope="row">${esc(r.department)}</th><td>${r.titles.size}</td><td>${r.rank}</td></tr>`).join('')}</tbody></table></div>` : `<div class="card pub-empty">No eligible department records${year ? ' for ' + year : ' yet'}.</div>`}</div>`;
+    root.innerHTML = header('Department Rankings', 'Compare MSU-GSC departments by their Scopus-indexed publications.', '<a class="btn" href="#/publications">View publications</a>') + `<form class="card pub-year-filter" id="pub-year-form"><label for="pub-ranking-year">Publication year</label><select id="pub-ranking-year"><option value="">All years</option>${years.map(y => `<option value="${y}" ${year === y ? 'selected' : ''}>${y}</option>`).join('')}</select><button class="btn" type="submit">Apply year</button></form><div id="pub-year-results" aria-live="polite">${list.length ? `<div class="card pub-table-scroll" role="region" aria-label="Department rankings table, scroll horizontally to see all columns" tabindex="0"><table class="pub-table pub-rankings-table"><caption class="pub-visually-hidden">Department rankings by number of publications${year ? ' in ' + year : ''}</caption><thead><tr><th scope="col">College</th><th scope="col">Department/Laboratory</th><th scope="col">Number of Publications</th><th scope="col">Ranking</th></tr></thead><tbody>${list.map(r => `<tr><td>${esc(r.college)}</td><th scope="row">${esc(r.department)}</th><td>${r.titles.size}</td><td>${r.rank}</td></tr>`).join('')}</tbody></table></div>` : `<div class="card pub-empty">No eligible department records${year ? ' for ' + year : ' yet'}.</div>`}</div>`;
     root.querySelector('#pub-year-form').addEventListener('submit', event => { event.preventDefault(); const selected = root.querySelector('#pub-ranking-year').value; drawRankings(root, selected); root.querySelector('#pub-ranking-year').focus(); });
+    root.querySelectorAll('.pub-rankings-table tbody tr').forEach((row, index) => {
+      const link = document.createElement('a');
+      link.href = rankingLink(list[index], year);
+      link.textContent = list[index].department;
+      row.querySelector('th').replaceChildren(link);
+      row.addEventListener('click', event => { if (!event.target.closest('a')) location.hash = link.hash; });
+    });
     prepareTableScroll(root);
   }
   function drawFacultyRankings(root) {
     const list = facultyRankings(data.rows);
-    root.innerHTML = header('Faculty Rankings', 'Compare MSU-GSC authors by their Scopus-indexed publications.', '<a class="btn" href="#/publications">View publications</a>') + `<p class="muted small">Based on author affiliations in publication records; faculty status is not recorded separately. Ties share a rank.</p>${list.length ? `<div class="card pub-table-scroll" role="region" aria-label="Faculty rankings table, scroll horizontally to see all columns" tabindex="0"><table class="pub-table pub-faculty-table"><caption class="pub-visually-hidden">Faculty rankings by number of publications</caption><thead><tr><th scope="col">Faculty</th><th scope="col">College/Domain</th><th scope="col">Department</th><th scope="col">Number of Publications</th><th scope="col">Ranking</th></tr></thead><tbody>${list.map(r => `<tr><th scope="row">${esc(r.name)}</th><td>${r.colleges.size ? [...r.colleges].map(esc).join('<br>') : '—'}</td><td>${r.departments.size ? [...r.departments].map(esc).join('<br>') : '—'}</td><td>${r.titles.size}</td><td>${r.rank}</td></tr>`).join('')}</tbody></table></div>` : '<div class="card pub-empty">No eligible MSU-GSC author records yet.</div>'}`;
+    root.innerHTML = header('Faculty Rankings', 'Compare MSU-GSC authors by their Scopus-indexed publications.', '<a class="btn" href="#/publications">View publications</a>') + `<p class="muted small">Based on author affiliations in publication records; faculty status is not recorded separately. Ties share a rank.</p>${list.length ? `<div class="card pub-table-scroll" role="region" aria-label="Faculty rankings table, scroll horizontally to see all columns" tabindex="0"><table class="pub-table pub-faculty-table"><caption class="pub-visually-hidden">Faculty rankings by number of publications</caption><thead><tr><th scope="col">Faculty</th><th scope="col">College/Domain</th><th scope="col">Department/Laboratory</th><th scope="col">Number of Publications</th><th scope="col">Ranking</th></tr></thead><tbody>${list.map(r => `<tr><th scope="row">${esc(r.name)}</th><td>${r.colleges.size ? [...r.colleges].map(esc).join('<br>') : '—'}</td><td>${r.departments.size ? [...r.departments].map(esc).join('<br>') : '—'}</td><td>${r.titles.size}</td><td>${r.rank}</td></tr>`).join('')}</tbody></table></div>` : '<div class="card pub-empty">No eligible MSU-GSC author records yet.</div>'}`;
     prepareTableScroll(root);
   }
   async function open(root, page) {

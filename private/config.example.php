@@ -11,5 +11,9 @@ return [
     'admin_password_hash' => 'replace-with-a-password-hash',
     // Generate with: php -r "echo bin2hex(random_bytes(32)), PHP_EOL;"
     'pii_key' => 'replace-with-a-64-character-hex-key',
+    // Browser API key restricted to your website and the Google Drive API; public files only.
+    'google_drive_browser_api_key' => '',
+    // Google Apps Script web app URL, deployed to execute as the accessing user.
+    'annual_reports_drive_manager_url' => '',
     'app_origin' => 'http://127.0.0.1:8000',
 ];

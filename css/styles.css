@@ -26,7 +26,9 @@
 }
 * { box-sizing: border-box; }
 html { min-width: 0; }
-body { margin: 0; background: var(--bg); font-size: 15px; line-height: 1.5; }
+/* Lock the page while any native modal is open; dialogs keep their own scrolling. */
+html:has(dialog:modal) { overflow: hidden; overscroll-behavior: none; }
+body { margin: 0; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; background: var(--bg); font-size: 15px; line-height: 1.5; }
 img, svg, canvas { max-width: 100%; }
 a { color: var(--brand); }
 h1, h2, h3, h4 { margin: 0 0 .4em; line-height: 1.25; font-family: var(--font-head); font-weight: 600; }
@@ -61,7 +63,7 @@ body > .nav-menu a { display: block; padding: 10px 12px; border-left: 3px solid 
 body > .nav-menu a:hover { background: var(--brand-soft); color: var(--brand-dark); }
 body > .nav-menu a.active { background: var(--brand-soft); border-left-color: var(--brand); color: var(--brand-dark); font-weight: 600; }
 .pattern-strip { height: 10px; background: url(../img/pattern-band.png) center / auto 46px repeat-x; opacity: .9; }
-main { width: 100%; max-width: 1240px; min-width: 0; margin: 0 auto; padding: 22px 20px 60px; }
+main { flex: 1 0 auto; width: 100%; max-width: 1240px; min-width: 0; margin: 0 auto; padding: 22px 20px 60px; }
 
 /* Page banner: the first heading block of each page */
 main .section-head:first-child, .survey > .section-head:first-child {
@@ -284,6 +286,7 @@ footer.site .inner { max-width: 1240px; margin: 0 auto; padding: 22px 20px 26px;
 .lic-form-error { padding: 10px 12px; background: var(--bad-soft); color: var(--bad); border-radius: 7px; margin: 14px 0 0; }
 .lic-form-error[hidden] { display: none; }
 .lic-dialog .lic-table { min-width: 830px; }
+.lic-topnotcher-dialog .lic-table { min-width: 0; }
 .lic-dialog .lic-table-wrap { border: 1px solid var(--line); border-radius: 9px; }
 .lic-confirm .lic-modal-body { font-size: .95rem; }
 .lic-confirm .lic-save { background: var(--bad); border-color: var(--bad); }
